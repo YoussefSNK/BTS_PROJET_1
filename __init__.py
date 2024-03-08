@@ -24,7 +24,7 @@ mysql = MySQL(app)
 
 @app.route('/')
 def accueil():  
-    return render_template('accueil.html')
+    return render_template('hello.html')
 
 
 @app.route("/authentification", methods=['GET', 'POST'])
