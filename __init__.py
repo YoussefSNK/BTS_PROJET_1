@@ -39,7 +39,7 @@ def authentification():
 def Readfiche(post_id):
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM clients WHERE id = ?', (post_id,))
+    cursor.execute('SELECT * FROM perso WHERE id = ?', (post_id,))
     data = cursor.fetchall()
     conn.close()
     
@@ -50,7 +50,7 @@ def Readfiche(post_id):
 def ReadBDD():
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM clients;')
+    cursor.execute('SELECT * FROM perso;')
     data = cursor.fetchall()
     conn.close()
     return render_template('read_data.html', data=data)
