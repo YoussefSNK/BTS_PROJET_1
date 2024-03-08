@@ -7,14 +7,14 @@ with open('schema.sql') as f:
 
 cur = connection.cursor()
 
-cur.execute("INSERT INTO clients (nom, prenom, adresse) VALUES (?, ?, ?)",('DUPONT', 'Emilie', '123, Rue des Lilas, 75001 Paris'))
-cur.execute("INSERT INTO clients (nom, prenom, adresse) VALUES (?, ?, ?)",('LEROUX', 'Lucas', '456, Avenue du Soleil, 31000 Toulouse'))
-cur.execute("INSERT INTO clients (nom, prenom, adresse) VALUES (?, ?, ?)",('MARTIN', 'Amandine', '789, Rue des Érables, 69002 Lyon'))
-cur.execute("INSERT INTO clients (nom, prenom, adresse) VALUES (?, ?, ?)",('TREMBLAY', 'Antoine', '1010, Boulevard de la Mer, 13008 Marseille'))
-cur.execute("INSERT INTO clients (nom, prenom, adresse) VALUES (?, ?, ?)",('LAMBERT', 'Sarah', '222, Avenue de la Liberté, 59000 Lille'))
-cur.execute("INSERT INTO clients (nom, prenom, adresse) VALUES (?, ?, ?)",('GAGNON', 'Nicolas', '456, Boulevard des Cerisiers, 69003 Lyon'))
-cur.execute("INSERT INTO clients (nom, prenom, adresse) VALUES (?, ?, ?)",('DUBOIS', 'Charlotte', '789, Rue des Roses, 13005 Marseille'))
-cur.execute("INSERT INTO clients (nom, prenom, adresse) VALUES (?, ?, ?)",('LEFEVRE', 'Thomas', '333, Rue de la Paix, 75002 Paris'))
+cur.execute("INSERT INTO perso (nom, licence, image) VALUES (?, ?, ?)",('Genesect', 'Pokémon', 'char/Genesect.png'))
+cur.execute("INSERT INTO perso (nom, licence, image) VALUES (?, ?, ?)",('Lancer', 'Deltarune', 'char/Lancer.png'))
+cur.execute("INSERT INTO perso (nom, licence, image) VALUES (?, ?, ?)",('Kindred', 'League of Legends', 'char/Kindred.png'))
+cur.execute("INSERT INTO perso (nom, licence, image) VALUES (?, ?, ?)",('Air Man', 'Megaman', 'char/Air Man.png'))
+cur.execute("INSERT INTO perso (nom, licence, image) VALUES (?, ?, ?)",('Papyrus', 'Undertale', 'char/Papyrus.png'))
+cur.execute("INSERT INTO perso (nom, licence, image) VALUES (?, ?, ?)",('Diego Brando', 'Steel Ball Run', 'char/Diego Brando.png'))
+cur.execute("INSERT INTO perso (nom, licence, image) VALUES (?, ?, ?)",('Paco Lovelantes', 'Jojolands', 'char/Paco Lovelantes.png'))
+cur.execute("INSERT INTO perso (nom, licence, image) VALUES (?, ?, ?)",('Inkling Boy', 'Splatoon', 'char/Inkling Boy.png'))
 
 connection.commit()
 connection.close()
