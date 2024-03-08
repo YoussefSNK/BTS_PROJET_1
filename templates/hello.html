@@ -1,0 +1,162 @@
+<!doctype html>
+<title>Evaluation</title>
+<h1>Bienvenue sur votre projet Métriques</h1>
+<h2>Ceci est le projet de : Prénom Nom</h2>
+<p>Si vous avez mis en ligne votre solution et si cette page d'accueil s'affiche dans votre navigateur alors <b>vous avez déjà gagné 4 points</b> sur votre note d'évaluation.</p>
+<p>Notions acquises lors de cette étape : Vous avez lors cette première étape apris à créer votre hébergement en ligne sur Alwaydata, installer une application, Forker un projet GitHUB et créer des Secrets qui seront utilisés lors de vos Commits pour mettre à jour votre site en ligne</p>
+<p>- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - </p>
+<h3>Exercice 1 : Personnaliser votre page d'accueil (1 point)</h3>
+<p>Modifier le fichier hello.html de votre projet GitHUB afin de préciser votre Prénom et Nom sur la page d'accueil de votre site (Modification de la ligne 4 du fichier hello.html)</p>
+<p>Notion acquises lors de cet exercice : Vous avez pris connaissance de votre environnement GitHUB avec ses fichiers, ses répertoires et ses "Commits" pour enregistrer vos modifications</p>
+<p>- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - </p>
+<h3>Exercice 2 : Création d'une nouvelle route (2 points)</h3>
+<p>Objectif : Savoir créer des routes (c'est à dire la création d'une nouvelle API)</p>
+L'exercice consiste à créer une nouvelle route accèssible depuis le chemin "/contact/" de votre site et qui affichera "Ma page de contact" dans le navigateur de l'internaute.
+L'internaute saisira l'adresse suivante dans son navigateur : <b>https://{Votre URL}/contact/</b> et obtiendra donc le résultat "Ma page de contact". Vous allez pour cela, depuis GitHUB, <b>ajouter</b> le code suivant dans votre fichier <b></b>__init__.py</b> qui est à la racine de votre Repository précédemment créé :
+<pre><code><xmp>
+@app.route("/contact/")
+def MaPremiereAPI():
+    return "<h2>Ma page de contact</h2>"
+</xmp></code></pre>
+Remarque importante : Ce code est à ajouter après la ligne "app = Flask(__name__)" qui est le début de votre programme et avant le bloc "if __name__ == "__main__" à la fin du fichier.
+<b>Attention l'indentation est très importante en Python.</b>
+</p>
+<p>Notion acquises lors de cet exercice : Vous avez appris lors de cet exercice à créer des API (c'est à dire des routes) dans une application Python. Vous pouvez créer autant d'API (de routes) que vous le souhaitez dans votre application Python.</p>
+<p>- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - </p>
+<h3>Exercice 3 : Les données d'une API (3 points)</h3>
+<p>Objectif : Utiliser les données issues d'une API externes pour créer une route adaptée à vos besoins.</p>
+<p>Pour commencer, copier l'URL ci-dessous dans un nouvel onglet de votre navigateur et observez le résultat :</p>
+https://samples.openweathermap.org/data/2.5/forecast?lat=0&lon=0&appid=xxx</p>
+<p>Il s'agit ici de quelques relévés météorologique de la ville Tawarano réalisées au cours de l'année 2017.
+Vous observerez que nous utilisons une API gratuite fourni par Openweathermap. C'est typiquement le format que vous trouverez dans le cadre des services de métriques (Données issues de serveurs, de réseaux, de stockages, etc..).</p>
+<p>Les API fournissent en général des données au format JSON. JSON est un format structuré avec des étiquettes (également appelé des keys) et ont pour objectif de fournir des données "brut".<br/>
+<b>Prenez ici quelques minutes pour "comprendre" la structure de ces données JSON et identifer les clés et les données.</b></p>
+<p>- - - - - </p>
+<p>Ce qui nous intéresse à présent, c'est extraire la valeur de [dt] (c'est à dire les dates) et les valeurs stockées dans la clé [main][temp], c'est à dire les températures du jour.</p>
+<p>A noter que les dates ici sont au format "Timestamp". C'est à dire que la donnée est le nombre de secondes depuis le 1 janvier 2000 (un légacy d'UNIX). Les températures sont stockées au format Kelvin (il faudra donc les convertir en °C).</p> 
+<p>Vous allez à présent créer une nouvelle route "/tawarano/" dans votre application Python pour filtrer l'API d'Openweathermap et extraire uniquement les dates et température du jour. Ci-dessous la route à ajouter dans votre application.
+<pre><code><xmp>
+@app.route('/tawarano/')
+def meteo():
+    response = urlopen('https://samples.openweathermap.org/data/2.5/forecast?lat=0&lon=0&appid=xxx')
+    raw_content = response.read()
+    json_content = json.loads(raw_content.decode('utf-8'))
+    results = []
+    for list_element in json_content.get('list', []):
+        dt_value = list_element.get('dt')
+        temp_day_value = list_element.get('main', {}).get('temp') - 273.15 # Conversion de Kelvin en °c 
+        results.append({'Jour': dt_value, 'temp': temp_day_value})
+    return jsonify(results=results)
+</xmp></code></pre></p>
+<p>Testez cette nouvelle route dans votre navigateur et observer le résultat.</p>    
+<p>- - - - - </p>
+<b>Exercice 3 Bis : Les fichiers HTML</b>
+<p>Objectif : Comprendre la philosophie des Frameworks</p>
+<p>Le Framework Flask nous impose de déposer tous les fichiers HTML dans le répertoire templates dédié à cet effet.
+Depuis GitHUB, nous allons donc créer et déposer dans le répertoire "templates" une page HTML qui sera accessible depuis la route suivante : https://{VOTRE_URL}/rapport/
+</p>
+<p>Etape 1.1 : Création du fichier graphique.html
+Dans votre répertoire templates, créez un fichier graphique.html contenant le code suivant :
+<pre><code><xmp>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Graphique</title>
+ </head>  
+<body>
+    <h2>Mon Graphique</h2>
+</body>
+</html>
+</xmp></code></pre></p>
+<p>Etape 1.2 : Création d'une nouvelle route
+Créez à présent une nouvelle route afin de pouvoir consulter votre fichier HTML depuis votre site en ligne.
+Pour cela, ajouter le code ci-dessous dans votre fichier __init__.py :
+<pre><code><xmp>
+@app.route("/rapport/")
+def mongraphique():
+    return render_template("graphique.html")
+</xmp></code></pre></p>
+<p>Notions acquises dans cet exercice : Nous avons vu lors de cet exercice comment créer et où déposer les fichiers HTML lorsque l'on utise le Framework Flask.
+Nous avons également découvert que les Framework (cadre de travail) nous imposent une structure de travail où chaque élément doit être à sa place.
+</p>
+<p>- - - - - </p>
+<b>Exercice 3 Ter : Transfert de données</b>
+<p>Mettons à présent ces valeurs sous la forme d'un graphique qui sera pour l'utilisateur bien plus agréable et facile à lire.
+Pour cela, nous devons utiliser les données de notre nouvelle API /rapport/ et les injecter dans notre fichier graphique.html.
+Nous allons utiliser une bibliothèque open source fournie par Google pour créer ce graphique.</p>
+<p>Modifier votre précédent fichier graphique.html dans GitHUB et remplacer son code par celui-ci :
+<pre><code><xmp>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Metrique</title>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+  </head>
+  <body>
+    <div id="chart_div"></div>
+    <script>
+      google.charts.load('current', { packages: ['corechart'] });
+      google.charts.setOnLoadCallback(drawBackgroundColor);
+     function drawBackgroundColor() {
+    function drawChart(data) {
+    // Convertir les données récupérées en un tableau utilisable par Google Charts
+    var dataTable = new google.visualization.DataTable();
+    dataTable.addColumn('string', 'Date');
+    dataTable.addColumn('number', 'Valeur');
+    data.results.forEach(entry => {
+      var date = new Date(entry.Jour * 1000);
+      dataTable.addRow([date.toLocaleDateString(), entry.temp]);
+    });
+    // Configurer les options du graphique en ligne
+    var options = {
+      title: 'Évolution des températures de la ville de Tawarano',
+      curveType: 'function',
+      legend: { position: 'bottom' }
+    };
+    var chart = new google.visualization.LineChart(document.getElementById('chart_div'));
+    chart.draw(dataTable, options);
+  }
+  // Récupération de données depuis notre API /tawarano/
+  fetch('/tawarano/')
+    .then(response => response.json())
+    .then(data => {
+      drawChart(data);
+    })
+}
+    </script>
+  </body>
+</html>
+</xmp></code></pre></p>
+<p>Notions acquises lors de cette séquence : Bravo ! Vous avez à présent en main tous les outils qui vous permettront de créer vos propres tableaux de bord.
+Vous avez appris à récupérer des données issues d'une API externe (des données issues d'un serveur externe), les adapter à vos besoins et afin créer vos propres graphiques.</p>
+<p>- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - </p>
+<h3>Exercice 4 : Créer son histogramme (3 points)</h3>
+<p>Objectif : Devenir autonome dans la création de ses graphiques.</p>
+<p>A l'aide des graphiques disponibles dans la galerie open source de Google disponibles à l'adresse suivante</p> 
+<p>https://developers-dot-devsite-v2-prod.appspot.com/chart/interactive/docs/gallery?hl=fr
+créer un nouveau graphique à colonnes (un histogramme) afin de présenter l'évolution des températures de la ville de Tawarano.
+Ce nouveau graphique sera accessible sur votre site en ligne via le chemin suivant : https://{Votre URL}/histogramme/</p>
+<p>- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - </p>
+<h3>Exercice 5 : Customisation de votre page de contact (3 points) </h3>
+<p>Objectif : Faites preuve de créativité...</p>
+<p>Reprenez l'exercice 2 et faites pointer à présent votre route "/contact/" vers un fichier HTML un peu plus élaboré (faites preuve de créativité). Dans ce formulaire l'utilisateur sera en mesure de pouvoir laisser son nom, son prénom et un message à votre attention.</p>
+<p>L'enregistrement des données ne sera pas opérationnel dans le cadre de cet exercice. Il s'agit juste ici de vous évaluer sur l'aspect esthétique de votre création. Les 3 points de cet exercice vous seront donc attribués sur la base du Design de votre œuvre (à la convenance de l'examinateur)</p>
+<p>- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - </p>
+<h3>Exercice 6 : Combien de Commits pour ce projet ?  (4 points) </h3>
+<p>Objectif : Autonomie totale ...</p>
+<p><b>Toutes les solutions informatiques proposent aujourd'hui des API</b>. GitHUB lui-même propose des API pour toutes sortes de mesures</p>
+<p>Charge à vous de savoir les extraire et les adapter à vos besoins. Dans cet exercice, vous allez créer un graphique qui mesurera la quantité de Commits que vous avez effectués (minute par minute) pour réaliser ce projet</p>
+Ce nouveau graphique sera accessible sur votre site en ligne via le chemin suivant : https://{Votre URL}/commits/</p>
+<p>Indice N°1 : Voici l'API utilisée pour extraire l'activité du repository qui est à l'origine de votre projet (celui que vous avez Forker en début de séance)</p>
+<p>https://api.github.com/repos/OpenRSI/5MCSI_Metriques/commits</p>
+<p>Indice N°2 : Les données qui nous intéressent ici sont stockées dans la clé suivante : [Commit][author][date]</p>
+<p>Indice N°3 : Voici une route qui permet d'extraire les minutes d'une information formatée comme suit : "2024-02-11T11:57:27Z" </p>
+<pre><code><xmp>
+@app.route('/extract-minutes/<date_string>')
+def extract_minutes(date_string):
+        date_object = datetime.strptime(date_string, '%Y-%m-%dT%H:%M:%SZ')
+        minutes = date_object.minute
+        return jsonify({'minutes': minutes})
+</xmp></code></pre></p>
+<p>- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - </p>
+<h2>FIN DU PROJET</h2>
