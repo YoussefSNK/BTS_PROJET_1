@@ -77,7 +77,7 @@ def authentification():
     return render_template('formulaire_authentification.html', error=False)
 
 
-@app.route('/fiche_client/<int:post_id>')
+@app.route('/fiche_perso/<int:post_id>')
 def Readfiche(post_id):
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
@@ -98,12 +98,12 @@ def ReadBDD():
     return render_template('read_data.html', data=data)
 
 
-@app.route('/enregistrer_client', methods=['GET'])
-def formulaire_client():
+@app.route('/enregistrer_perso', methods=['GET'])
+def formulaire_perso():
     return render_template('formulaire.html')  # afficher le formulaire
 
-@app.route('/enregistrer_client', methods=['POST'])
-def enregistrer_client():
+@app.route('/enregistrer_perso', methods=['POST'])
+def enregistrer_perso():
     nom = request.form['nom']
     prenom = request.form['prenom']
 
@@ -111,7 +111,7 @@ def enregistrer_client():
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
 
-    # Exécution de la requête SQL pour insérer un nouveau client
+    # Exécution de la requête SQL pour insérer un nouveau perso
     cursor.execute('INSERT INTO perso (nom, licence, image) VALUES (?, ?, ?)', (nom, prenom, "Genesect.png"))
     conn.commit()
     conn.close()
