@@ -45,7 +45,7 @@ def upload_file():
     # Vérifie si le fichier est une image
     if file and allowed_file(file.filename):
         extension = filename[-4:]
-        filename = secure_filename(f"{max_id + 1 + extension}")  # Nom de fichier avec l'ID + 1 et l'extension jpg
+        filename = secure_filename(f"{max_id + 1}{extension}")  # Nom de fichier avec l'ID + 1 et l'extension jpg
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         return redirect(url_for('uploaded_file', filename=filename))
     else:
