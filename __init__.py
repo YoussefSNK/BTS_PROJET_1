@@ -14,6 +14,41 @@ app.secret_key = b'_5#y2L"F4Q8z\n\xec]/'  # Clé secrète pour les sessions
 def est_authentifie():
     return session.get('authentifie')
 
+################################### Code de Boris
+
+# Répertoire où les images téléchargées seront sauvegardées
+UPLOAD_FOLDER = 'uploads'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# Extensions d'images autorisées
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    # Vérifie si la requête POST contient un fichier
+    if 'file' not in request.files:
+        return redirect(request.url)
+    file = request.files['file']
+    # Vérifie si aucun fichier n'a été sélectionné
+    if file.filename == '':
+        return redirect(request.url)
+    # Vérifie si le fichier est une image
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        return redirect(url_for('uploaded_file', filename=filename))
+    else:
+        return "Format de fichier non pris en charge."
+
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return f'Image téléchargée: <img src="{url_for("static", filename="uploads/" + filename)}" />'
+
+################################################
+
 @app.route('/lecture')
 def lecture():
     if not est_authentifie():
@@ -77,9 +112,6 @@ def enregistrer_client():
     conn.commit()
     conn.close()
     return redirect('/consultation/')  # Rediriger vers la page d'accueil après l'enregistrement
-
-
-
 
 @app.route('/')
 def hello_world():
