@@ -35,13 +35,25 @@ def upload_file():
     # Vérifie si aucun fichier n'a été sélectionné
     if file.filename == '':
         return redirect(request.url)
+    # Récupère la valeur de l'ID maximal
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT id FROM perso ORDER BY id DESC LIMIT 1;')
+    data = cursor.fetchone()
+    conn.close()
+    max_id = data[0] if data else 0  # Si aucune donnée n'est retournée, max_id = 0
     # Vérifie si le fichier est une image
     if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
+        extension = filename[-4:]
+        filename = secure_filename(f"{max_id + 1 + extension}")  # Nom de fichier avec l'ID + 1 et l'extension jpg
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         return redirect(url_for('uploaded_file', filename=filename))
     else:
         return "Format de fichier non pris en charge."
+
+
+
+
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
@@ -127,10 +139,10 @@ def enregistrer_perso():
 def recherche_id_max():
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM perso ORDER BY id DESC LIMIT 1;')
+    cursor.execute('SELECT id FROM perso ORDER BY id DESC LIMIT 1;')
     data = cursor.fetchall()
     conn.close()
-    return render_template('read_data.html', data=data)
+    return data
 
 
 
