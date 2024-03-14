@@ -44,7 +44,7 @@ def upload_file():
     max_id = data[0] if data else 0  # Si aucune donnée n'est retournée, max_id = 0
     # Vérifie si le fichier est une image
     if file and allowed_file(file.filename):
-        print("log nul", filename)
+        print("log nul", file.filename)
         extension = filename[-4:]
         filename = secure_filename(f"{max_id + 1}{extension}")  # Nom de fichier avec l'ID + 1 et l'extension jpg
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
