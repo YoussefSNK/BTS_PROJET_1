@@ -77,6 +77,11 @@ def authentification():
     return render_template('formulaire_authentification.html', error=False)
 
 
+
+
+
+
+
 @app.route('/fiche_perso/<int:post_id>')
 def Readfiche(post_id):
     conn = sqlite3.connect('database.db')
@@ -116,6 +121,30 @@ def enregistrer_perso():
     conn.commit()
     conn.close()
     return redirect('/consultation/')  # Rediriger vers la page d'accueil après l'enregistrement
+
+
+@app.route('/max_id')
+def recherche_id_max():
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM perso ORDER BY id DESC LIMIT 1;')
+    data = cursor.fetchall()
+    conn.close()
+    return render_template('read_data.html', data=data)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 @app.route('/')
 def hello_world():
