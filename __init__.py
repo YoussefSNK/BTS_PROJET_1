@@ -17,7 +17,7 @@ def est_authentifie():
 ################################### Code de Boris
 
 # Répertoire où les images téléchargées seront sauvegardées
-UPLOAD_FOLDER = 'uploads'
+UPLOAD_FOLDER = './static/images'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Extensions d'images autorisées
