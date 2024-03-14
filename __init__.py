@@ -47,6 +47,10 @@ def upload_file():
 def uploaded_file(filename):
     return f'Image téléchargée: <img src="{url_for("static", filename="uploads/" + filename)}" />'
 
+@app.route('/form_upload')
+def index():
+    return render_template('form_upload.html')
+
 ################################################
 
 @app.route('/lecture')
