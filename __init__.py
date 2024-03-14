@@ -4,6 +4,8 @@ from werkzeug.utils import secure_filename
 #from flask_uploads import UploadSet, configure_uploads, IMAGES
 from urllib.request import urlopen
 import sqlite3
+import os
+
 
 app = Flask(__name__)                                                                                                                  
 app.secret_key = b'_5#y2L"F4Q8z\n\xec]/'  # Clé secrète pour les sessions
