@@ -1,5 +1,6 @@
 from flask import Flask, render_template_string, render_template, jsonify, request, redirect, url_for, session
 from flask import json
+from flask_uploads import UploadSet
 #from flask_uploads import UploadSet, configure_uploads, IMAGES
 from urllib.request import urlopen
 import sqlite3
