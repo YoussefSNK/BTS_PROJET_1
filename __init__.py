@@ -133,7 +133,7 @@ def enregistrer_et_uploader():
     # Récupération des données du formulaire
     nom = request.form['nom']
     prenom = request.form['prenom']
-    image = request.files['file']
+    image = request.form['file']
     print("log 2")
 
     # Connexion à la base de données
