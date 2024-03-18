@@ -42,10 +42,13 @@ def upload_file():
     data = cursor.fetchone()
     conn.close()
     max_id = data[0] if data else 0  # Si aucune donnée n'est retournée, max_id = 0
-    # Vérifie si le fichier est une image
+
+    #ici on insert into avec le user, le nom du fichier
+    
+
     if file and allowed_file(file.filename):
         extension = file.filename[-4:]
-        filename = secure_filename(f"{max_id + 1}{extension}")  # Nom de fichier avec l'ID + 1 et l'extension jpg
+        filename = secure_filename(f"{max_id + 1}{extension}")
         print("log nul", file.filename)
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         return redirect(url_for('uploaded_file', filename=filename))
