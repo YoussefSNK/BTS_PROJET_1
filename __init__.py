@@ -44,7 +44,7 @@ def upload_file():
     max_id = data[0] if data else 0  # Si aucune donnée n'est retournée, max_id = 0
 
     #ici on insert into avec le user, le nom du fichier
-    
+
 
     if file and allowed_file(file.filename):
         extension = file.filename[-4:]
@@ -98,6 +98,80 @@ def authentification():
 
 
 
+@app.route('/enregistrer_perso', methods=['GET'])
+def formulaire_perso():
+    return render_template('formulaire.html')
+
+@app.route('/enregistrer_perso', methods=['POST'])
+def enregistrer_perso():
+    nom = request.form['nom']
+    prenom = request.form['prenom']
+
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+
+    cursor.execute('INSERT INTO perso (nom, licence, image) VALUES (?, ?, ?)', (nom, prenom, "Genesect.png"))
+    conn.commit()
+    conn.close()
+    return redirect('/consultation/')
+
+
+
+
+
+
+
+
+@app.route('/enregistrer_et_uploader', methods=['GET'])
+def formulaire_perso():
+    return render_template('formulaire_ajout_image.html')
+
+
+@app.route('/enregistrer_et_uploader', methods=['POST'])
+def enregistrer_et_uploader():
+    # Récupération des données du formulaire
+    nom = request.form['nom']
+    prenom = request.form['prenom']
+    image = request.files['image']
+
+    # Connexion à la base de données
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+
+    # Exécution de la requête SQL pour insérer un nouveau personnage
+    cursor.execute('INSERT INTO perso (nom, prenom, image) VALUES (?, ?, ?)', (nom, prenom, "placeholder"))
+    conn.commit()
+
+    # Récupération de l'ID du personnage nouvellement inséré
+    cursor.execute('SELECT id FROM perso ORDER BY id DESC LIMIT 1;')
+    data = cursor.fetchone()
+    max_id = data[0] if data else 0
+
+    # Vérification de l'image et enregistrement si elle est valide
+    if image and allowed_file(image.filename):
+        extension = image.filename[-4:]
+        filename = secure_filename(f"{max_id}{extension}")
+        image.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        # Mettre à jour le nom de l'image dans la base de données
+        cursor.execute('UPDATE perso SET image = ? WHERE id = ?', (filename, max_id))
+        conn.commit()
+    else:
+        # Supprimer l'entrée si aucune image valide n'est fournie
+        cursor.execute('DELETE FROM perso WHERE id = ?', (max_id,))
+        conn.commit()
+        return "Erreur: Format de fichier non pris en charge."
+
+    conn.close()
+    return redirect('/consultation/')  # Rediriger vers la page d'accueil après l'enregistrement
+
+
+
+
+# -------------------------------------------------------
+# ----------------------- Lecture -----------------------
+# -------------------------------------------------------
+
+
 @app.route('/fiche_perso/<int:post_id>')
 def Readfiche(post_id):
     conn = sqlite3.connect('database.db')
@@ -119,24 +193,12 @@ def ReadBDD():
     return render_template('read_data.html', data=data)
 
 
-@app.route('/enregistrer_perso', methods=['GET'])
-def formulaire_perso():
-    return render_template('formulaire.html')  # afficher le formulaire
 
-@app.route('/enregistrer_perso', methods=['POST'])
-def enregistrer_perso():
-    nom = request.form['nom']
-    prenom = request.form['prenom']
 
-    # Connexion à la base de données
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
 
-    # Exécution de la requête SQL pour insérer un nouveau perso
-    cursor.execute('INSERT INTO perso (nom, licence, image) VALUES (?, ?, ?)', (nom, prenom, "Genesect.png"))
-    conn.commit()
-    conn.close()
-    return redirect('/consultation/')  # Rediriger vers la page d'accueil après l'enregistrement
+
+
+
 
 
 @app.route('/max_id')
@@ -147,14 +209,6 @@ def recherche_id_max():
     data = cursor.fetchall()
     conn.close()
     return data
-
-
-
-
-
-
-
-
 
 
 
