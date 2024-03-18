@@ -98,9 +98,9 @@ def authentification():
 
 
 
-@app.route('/enregistrer_perso', methods=['GET'])
-def formulaire_perso():
-    return render_template('formulaire.html')
+# @app.route('/enregistrer_perso', methods=['GET'])
+# def formulaire_perso():
+#     return render_template('formulaire.html')
 
 @app.route('/enregistrer_perso', methods=['POST'])
 def enregistrer_perso():
