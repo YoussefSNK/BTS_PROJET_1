@@ -129,23 +129,28 @@ def formulaire_perso():
 
 @app.route('/enregistrer_et_uploader', methods=['POST'])
 def enregistrer_et_uploader():
+    print("log 1")
     # Récupération des données du formulaire
     nom = request.form['nom']
     prenom = request.form['prenom']
     image = request.files['file']
+    print("log 2")
 
     # Connexion à la base de données
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
+    print("log 3")
 
     # Exécution de la requête SQL pour insérer un nouveau personnage
     cursor.execute('INSERT INTO perso (nom, prenom, image) VALUES (?, ?, ?)', (nom, prenom, "placeholder"))
     conn.commit()
+    print("log 4")
 
     # Récupération de l'ID du personnage nouvellement inséré
     cursor.execute('SELECT id FROM perso ORDER BY id DESC LIMIT 1;')
     data = cursor.fetchone()
     max_id = data[0] if data else 0
+    print("log 5")
 
     # Vérification de l'image et enregistrement si elle est valide
     if image and allowed_file(image.filename):
@@ -155,7 +160,9 @@ def enregistrer_et_uploader():
         # Mettre à jour le nom de l'image dans la base de données
         cursor.execute('UPDATE perso SET image = ? WHERE id = ?', (filename, max_id))
         conn.commit()
+        print("log 6")
     else:
+        print("log 7")
         # Supprimer l'entrée si aucune image valide n'est fournie
         cursor.execute('DELETE FROM perso WHERE id = ?', (max_id,))
         conn.commit()
