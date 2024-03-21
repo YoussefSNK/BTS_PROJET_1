@@ -143,8 +143,9 @@ def enregistrer_et_uploader():
 
     # Exécution de la requête SQL pour insérer un nouveau personnage
     cursor.execute('INSERT INTO perso (nom, prenom, image) VALUES (?, ?, ?)', (nom, prenom, "placeholder"))
-    conn.commit()
     print("log 4")
+    conn.commit()
+    print("log 4.5")
 
     # Récupération de l'ID du personnage nouvellement inséré
     cursor.execute('SELECT id FROM perso ORDER BY id DESC LIMIT 1;')
