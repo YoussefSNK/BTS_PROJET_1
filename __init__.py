@@ -154,7 +154,7 @@ def enregistrer_et_uploader():
     print("log 5")
 
     # Vérification de l'image et enregistrement si elle est valide
-    if image and allowed_file(image.filename):
+    if image and allowed_file(image):
         extension = image.filename[-4:]
         filename = secure_filename(f"{max_id}{extension}")
         image.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
