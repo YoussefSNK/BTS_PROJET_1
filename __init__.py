@@ -105,12 +105,12 @@ def authentification():
 @app.route('/enregistrer_perso', methods=['POST'])
 def enregistrer_perso():
     nom = request.form['nom']
-    prenom = request.form['prenom']
+    licence = request.form['licence']
 
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
 
-    cursor.execute('INSERT INTO perso (nom, licence, image) VALUES (?, ?, ?)', (nom, prenom, "Genesect.png"))
+    cursor.execute('INSERT INTO perso (nom, licence, image) VALUES (?, ?, ?)', (nom, licence, "Genesect.png"))
     conn.commit()
     conn.close()
     return redirect('/consultation/')
@@ -132,7 +132,7 @@ def enregistrer_et_uploader():
     print("log 1")
     # Récupération des données du formulaire
     nom = request.form['nom']
-    prenom = request.form['prenom']
+    licence = request.form['licence']
     image = request.form['file']
     print("log 2")
 
@@ -142,7 +142,7 @@ def enregistrer_et_uploader():
     print("log 3")
 
     # Exécution de la requête SQL pour insérer un nouveau personnage
-    cursor.execute('INSERT INTO perso (nom, prenom, image) VALUES (?, ?, ?)', (nom, prenom, "placeholder"))
+    cursor.execute('INSERT INTO perso (nom, licence, image) VALUES (?, ?, ?)', (nom, licence, "placeholder"))
     print("log 4")
     conn.commit()
     print("log 4.5")
