@@ -154,7 +154,7 @@ def enregistrer_et_uploader():
     print("log 5")
 
     # Vérification de l'image et enregistrement si elle est valide
-    if image and allowed_file(image.filename):
+    if image and allowed_file(image):
         print("log 5.1")
         extension = image.filename[-4:]
         print("log 5.2")
