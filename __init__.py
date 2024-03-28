@@ -59,7 +59,7 @@ def upload_file():
 
 
 @app.route('/upload2', methods=['POST'])
-def upload_file():
+def upload_file2():
     # Vérifie si la requête POST contient un fichier
     if 'file' not in request.files:
         return redirect(request.url)
@@ -176,7 +176,7 @@ def enregistrer_et_uploader():
     cursor = conn.cursor()
     print("log 3")
 
-    
+
 
     cursor.execute('SELECT id FROM perso ORDER BY id DESC LIMIT 1;')
     data = cursor.fetchone()
