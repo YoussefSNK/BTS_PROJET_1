@@ -157,9 +157,9 @@ def enregistrer_et_uploader():
     if image and allowed_file(image):
         print("log 5.1")
         extension = image[-4:]
-        print(extension)
+        print("extension", extension)
         filename = secure_filename(f"{max_id}{extension}")
-        print("log 5.3")
+        print("filename = ", filename)
         image.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         print("log 5.4")
         # Mettre à jour le nom de l'image dans la base de données
