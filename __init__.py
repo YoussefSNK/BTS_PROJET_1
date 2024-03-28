@@ -136,22 +136,40 @@ def enregistrer_et_uploader():
     file = request.form['file']
     print("log 2")
 
+
+    cursor.execute('SELECT id FROM perso ORDER BY id DESC LIMIT 1;')
+    data = cursor.fetchone()
+    max_id = data[0] if data else 0
+    print("log 5")
+
+    # Vérification de l'image et enregistrement si elle est valide
+    if file and allowed_file(file.filename):
+        print("log 5.1")
+        extension = file.filename[-4:]
+        print("extension", extension)
+        filename = secure_filename(f"{max_id}{extension}")
+        print("filename = ", filename)
+        print("file =", file)
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        print("log 5.4")
+
+
+
+
+
     # Connexion à la base de données
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
     print("log 3")
 
     # Exécution de la requête SQL pour insérer un nouveau personnage
-    cursor.execute('INSERT INTO perso (nom, licence, image) VALUES (?, ?, ?)', (nom, licence, "placeholder"))
+    cursor.execute('INSERT INTO perso (nom, licence, image) VALUES (?, ?, ?)', (nom, licence, filename))
     print("log 4")
     conn.commit()
     print("log 4.5")
 
     # Récupération de l'ID du personnage nouvellement inséré
-    cursor.execute('SELECT id FROM perso ORDER BY id DESC LIMIT 1;')
-    data = cursor.fetchone()
-    max_id = data[0] if data else 0
-    print("log 5")
+
 
 
 
