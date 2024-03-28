@@ -56,8 +56,6 @@ def upload_file():
         return "Format de fichier non pris en charge."
 
 
-
-
 @app.route('/upload2', methods=['POST'])
 def upload_file2():
     # Vérifie si la requête POST contient un fichier
@@ -166,7 +164,7 @@ def enregistrer_et_uploader():
     # Récupération des données du formulaire
     nom = request.form['nom']
     licence = request.form['licence']
-    file = request.form['file']
+    file = request.files['file']
     print("log 2")
 
 
