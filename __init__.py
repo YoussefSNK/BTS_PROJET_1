@@ -133,7 +133,7 @@ def enregistrer_et_uploader():
     # Récupération des données du formulaire
     nom = request.form['nom']
     licence = request.form['licence']
-    image = request.form['file']
+    file = request.form['file']
     print("log 2")
 
     # Connexion à la base de données
@@ -153,15 +153,20 @@ def enregistrer_et_uploader():
     max_id = data[0] if data else 0
     print("log 5")
 
+
+
+
+
+
     # Vérification de l'image et enregistrement si elle est valide
-    if image and allowed_file(image):
+    if file and allowed_file(file.filename):
         print("log 5.1")
-        extension = image[-4:]
+        extension = file.filename[-4:]
         print("extension", extension)
         filename = secure_filename(f"{max_id}{extension}")
         print("filename = ", filename)
-        print("image =", image)
-        image(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        print("file =", file)
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         print("log 5.4")
         # Mettre à jour le nom de l'image dans la base de données
         cursor.execute('UPDATE perso SET image = ? WHERE id = ?', (filename, max_id))
