@@ -155,11 +155,16 @@ def enregistrer_et_uploader():
 
     # Vérification de l'image et enregistrement si elle est valide
     if image and allowed_file(image.filename):
+        print("log 5.1")
         extension = image.filename[-4:]
+        print("log 5.2")
         filename = secure_filename(f"{max_id}{extension}")
+        print("log 5.3")
         image.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        print("log 5.4")
         # Mettre à jour le nom de l'image dans la base de données
         cursor.execute('UPDATE perso SET image = ? WHERE id = ?', (filename, max_id))
+        print("log 5.5")
         conn.commit()
         print("log 6")
     else:
