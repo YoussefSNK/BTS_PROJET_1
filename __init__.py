@@ -160,7 +160,8 @@ def enregistrer_et_uploader():
         print("extension", extension)
         filename = secure_filename(f"{max_id}{extension}")
         print("filename = ", filename)
-        image.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        print("image =", image)
+        image(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         print("log 5.4")
         # Mettre à jour le nom de l'image dans la base de données
         cursor.execute('UPDATE perso SET image = ? WHERE id = ?', (filename, max_id))
