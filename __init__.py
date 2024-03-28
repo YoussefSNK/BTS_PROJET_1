@@ -167,8 +167,6 @@ def enregistrer_et_uploader():
     file = request.files['file']
     print("log 2")
 
-
-
     # Connexion à la base de données
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
@@ -212,26 +210,26 @@ def enregistrer_et_uploader():
 
 
     # Vérification de l'image et enregistrement si elle est valide
-    if file and allowed_file(file.filename):
-        print("log 5.1")
-        extension = file.filename[-4:]
-        print("extension", extension)
-        filename = secure_filename(f"{max_id}{extension}")
-        print("filename = ", filename)
-        print("file =", file)
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        print("log 5.4")
-        # Mettre à jour le nom de l'image dans la base de données
-        cursor.execute('UPDATE perso SET image = ? WHERE id = ?', (filename, max_id))
-        print("log 5.5")
-        conn.commit()
-        print("log 6")
-    else:
-        print("log 7")
-        # Supprimer l'entrée si aucune image valide n'est fournie
-        cursor.execute('DELETE FROM perso WHERE id = ?', (max_id,))
-        conn.commit()
-        return "Erreur: Format de fichier non pris en charge."
+    # if file and allowed_file(file.filename):
+    #     print("log 5.1")
+    #     extension = file.filename[-4:]
+    #     print("extension", extension)
+    #     filename = secure_filename(f"{max_id}{extension}")
+    #     print("filename = ", filename)
+    #     print("file =", file)
+    #     file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+    #     print("log 5.4")
+    #     # Mettre à jour le nom de l'image dans la base de données
+    #     cursor.execute('UPDATE perso SET image = ? WHERE id = ?', (filename, max_id))
+    #     print("log 5.5")
+    #     conn.commit()
+    #     print("log 6")
+    # else:
+    #     print("log 7")
+    #     # Supprimer l'entrée si aucune image valide n'est fournie
+    #     cursor.execute('DELETE FROM perso WHERE id = ?', (max_id,))
+    #     conn.commit()
+    #     return "Erreur: Format de fichier non pris en charge."
 
     conn.close()
     return redirect('/consultation/')  # Rediriger vers la page d'accueil après l'enregistrement
