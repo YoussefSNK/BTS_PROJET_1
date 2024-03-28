@@ -58,6 +58,39 @@ def upload_file():
 
 
 
+@app.route('/upload2', methods=['POST'])
+def upload_file():
+    # Vérifie si la requête POST contient un fichier
+    if 'file' not in request.files:
+        return redirect(request.url)
+    file = request.files['file']
+    # Vérifie si aucun fichier n'a été sélectionné
+    if file.filename == '':
+        return redirect(request.url)
+    # Récupère la valeur de l'ID maximal
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT id FROM perso ORDER BY id DESC LIMIT 1;')
+    data = cursor.fetchone()
+    conn.close()
+    max_id = data[0] if data else 0  # Si aucune donnée n'est retournée, max_id = 0
+
+
+    if file and allowed_file(file.filename):
+        extension = file.filename[-4:]
+        filename = secure_filename(f"{max_id + 1}{extension}")
+        print("log nul", file.filename)
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        return redirect(url_for('uploaded_file', filename=filename))
+    else:
+        return "Format de fichier non pris en charge."
+
+
+
+
+
+
+
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
@@ -137,6 +170,14 @@ def enregistrer_et_uploader():
     print("log 2")
 
 
+
+    # Connexion à la base de données
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    print("log 3")
+
+    
+
     cursor.execute('SELECT id FROM perso ORDER BY id DESC LIMIT 1;')
     data = cursor.fetchone()
     max_id = data[0] if data else 0
@@ -157,10 +198,6 @@ def enregistrer_et_uploader():
 
 
 
-    # Connexion à la base de données
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    print("log 3")
 
     # Exécution de la requête SQL pour insérer un nouveau personnage
     cursor.execute('INSERT INTO perso (nom, licence, image) VALUES (?, ?, ?)', (nom, licence, filename))
