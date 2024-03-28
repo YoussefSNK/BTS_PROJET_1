@@ -184,15 +184,11 @@ def enregistrer_et_uploader():
         print("log 5.1")
         extension = file.filename[-4:]
         print("extension", extension)
-        filename = secure_filename(f"{max_id}{extension}")
+        filename = secure_filename(f"{max_id + 1}{extension}")
         print("filename = ", filename)
         print("file =", file)
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         print("log 5.4")
-
-
-
-
 
 
     # Exécution de la requête SQL pour insérer un nouveau personnage
