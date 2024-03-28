@@ -56,36 +56,6 @@ def upload_file():
         return "Format de fichier non pris en charge."
 
 
-@app.route('/upload2', methods=['POST'])
-def upload_file2():
-    # Vérifie si la requête POST contient un fichier
-    if 'file' not in request.files:
-        return redirect(request.url)
-    file = request.files['file']
-    # Vérifie si aucun fichier n'a été sélectionné
-    if file.filename == '':
-        return redirect(request.url)
-    # Récupère la valeur de l'ID maximal
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT id FROM perso ORDER BY id DESC LIMIT 1;')
-    data = cursor.fetchone()
-    conn.close()
-    max_id = data[0] if data else 0  # Si aucune donnée n'est retournée, max_id = 0
-
-
-    if file and allowed_file(file.filename):
-        extension = file.filename[-4:]
-        filename = secure_filename(f"{max_id + 1}{extension}")
-        print("log nul", file.filename)
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        return redirect(url_for('uploaded_file', filename=filename))
-    else:
-        return "Format de fichier non pris en charge."
-
-
-
-
 
 
 
@@ -94,9 +64,7 @@ def upload_file2():
 def uploaded_file(filename):
     return f'Image téléchargée: <img src="{url_for("static", filename="images/" + filename)}" />'
 
-@app.route('/form_upload')
-def index():
-    return render_template('form_upload.html')
+
 
 ################################################
 
@@ -127,11 +95,6 @@ def authentification():
 
 
 
-
-
-# @app.route('/enregistrer_perso', methods=['GET'])
-# def formulaire_perso():
-#     return render_template('formulaire.html')
 
 @app.route('/enregistrer_perso', methods=['POST'])
 def enregistrer_perso():
