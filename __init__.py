@@ -80,15 +80,19 @@ def lecture():
 @app.route('/authentification', methods=['GET', 'POST'])
 def authentification():
     if request.method == 'POST':
-        # Vérifier les identifiants
         if request.form['username'] == 'admin' and request.form['password'] == 'password': # password à cacher par la suite
             session['authentifie'] = True
 
-            session['user_id'] = 0  # REMPLACER 0 PAR L'ID DE L'USER
-            # Rediriger vers la route lecture après une authentification réussie
-            return redirect(url_for('lecture'))
+            
+            conn = sqlite3.connect('database.db')
+            cursor = conn.cursor()
+            cursor.execute('SELECT user_id FROM user WHERE (login, password) = VALUES (?, ?)', (request.form['username'], request.form['password'],))
+            data = cursor.fetchall()
+            conn.close()
+
+            session['user_id'] = data
+            return redirect(url_for('lecture')) # Redirige vers la route lecture après l'authentification
         else:
-            # Afficher un message d'erreur si les identifiants sont incorrects
             return render_template('formulaire_authentification.html', error=True)
     return render_template('formulaire_authentification.html', error=False)
 
@@ -191,37 +195,6 @@ def enregistrer_et_uploader():
     print("log 4")
     conn.commit()
     print("log 4.5")
-
-    # Récupération de l'ID du personnage nouvellement inséré
-
-
-
-
-
-
-
-    # Vérification de l'image et enregistrement si elle est valide
-    # if file and allowed_file(file.filename):
-    #     print("log 5.1")
-    #     extension = file.filename[-4:]
-    #     print("extension", extension)
-    #     filename = secure_filename(f"{max_id}{extension}")
-    #     print("filename = ", filename)
-    #     print("file =", file)
-    #     file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-    #     print("log 5.4")
-    #     # Mettre à jour le nom de l'image dans la base de données
-    #     cursor.execute('UPDATE perso SET image = ? WHERE id = ?', (filename, max_id))
-    #     print("log 5.5")
-    #     conn.commit()
-    #     print("log 6")
-    # else:
-    #     print("log 7")
-    #     # Supprimer l'entrée si aucune image valide n'est fournie
-    #     cursor.execute('DELETE FROM perso WHERE id = ?', (max_id,))
-    #     conn.commit()
-    #     return "Erreur: Format de fichier non pris en charge."
-
     conn.close()
     return redirect('/consultation/')  # Rediriger vers la page d'accueil après l'enregistrement
 
@@ -270,13 +243,6 @@ def ReadBDD():
 
 
 
-
-
-
-
-
-
-
 @app.route('/max_id')
 def recherche_id_max():
     conn = sqlite3.connect('database.db')
@@ -285,11 +251,6 @@ def recherche_id_max():
     data = cursor.fetchall()
     conn.close()
     return data
-
-
-
-
-
 
 
 @app.route('/')
