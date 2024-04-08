@@ -86,7 +86,7 @@ def authentification():
             
             conn = sqlite3.connect('database.db')
             cursor = conn.cursor()
-            cursor.execute('SELECT user_id FROM user WHERE login = ? AND password = ?', (request.form['username'], request.form['password'],))
+            cursor.execute('SELECT id FROM user WHERE login = ? AND password = ?', (request.form['username'], request.form['password'],))
             #cursor.execute('SELECT * FROM perso WHERE id = ?', (post_id,))
             data = cursor.fetchall()
             conn.close()
