@@ -21,7 +21,7 @@ UPLOAD_FOLDER = './static/images'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Extensions d'images autorisées
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -43,9 +43,8 @@ def upload_file():
     conn.close()
     max_id = data[0] if data else 0  # Si aucune donnée n'est retournée, max_id = 0
 
+
     #ici on insert into avec le user, le nom du fichier
-
-
     if file and allowed_file(file.filename):
         extension = file.filename[-4:]
         filename = secure_filename(f"{max_id + 1}{extension}")
@@ -73,9 +72,10 @@ def lecture():
     if not est_authentifie():
         # Rediriger vers la page d'authentification si l'utilisateur n'est pas authentifié
         return redirect(url_for('authentification'))
-
   # Si l'utilisateur est authentifié
     return "<h2>Bravo, vous êtes authentifié</h2>"
+
+
 
 @app.route('/authentification', methods=['GET', 'POST'])
 def authentification():
@@ -88,7 +88,6 @@ def authentification():
         else:
             # Afficher un message d'erreur si les identifiants sont incorrects
             return render_template('formulaire_authentification.html', error=True)
-
     return render_template('formulaire_authentification.html', error=False)
 
 
@@ -245,12 +244,26 @@ def Readfiche(post_id):
 
 @app.route('/consultation/')
 def ReadBDD():
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM perso;')
-    data = cursor.fetchall()
-    conn.close()
-    return render_template('read_data.html', data=data)
+    # Vérifier si l'utilisateur est connecté
+    if 'authentifie' in session and session['authentifie']:
+        # Récupérer l'ID de l'utilisateur connecté
+        user_id = session.get('user_id')
+
+        # Connexion à la base de données
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+
+        # Exécuter la requête SQL pour récupérer les données de l'utilisateur connecté
+        cursor.execute('SELECT * FROM perso WHERE id = ?', (user_id,))
+        data = cursor.fetchall()
+
+        # Fermer la connexion à la base de données
+        conn.close()
+
+        return render_template('read_data.html', data=data)
+    else:
+        # Rediriger vers la page d'authentification si l'utilisateur n'est pas connecté
+        return redirect(url_for('authentification'))
 
 
 
