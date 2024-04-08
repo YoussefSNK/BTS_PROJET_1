@@ -114,7 +114,7 @@ def enregistrer_client():
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
 
-    cursor.execute('INSERT INTO user (login, password) VALUES (?, ?, ?)', (login, password))
+    cursor.execute('INSERT INTO user (login, password) VALUES (?, ?)', (login, password))
     conn.commit()
     conn.close()
     return redirect('/consultation/')  # Rediriger vers la page d'accueil après l'enregistrement
