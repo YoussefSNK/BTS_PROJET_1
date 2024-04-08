@@ -250,6 +250,7 @@ def ReadBDD():
     if 'authentifie' in session and session['authentifie']:
         # Récupérer l'ID de l'utilisateur connecté
         user_id = session.get('user_id')
+        print("ID de l'utilisateur connecté:", user_id)
 
         # Connexion à la base de données
         conn = sqlite3.connect('database.db')
