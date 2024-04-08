@@ -257,7 +257,7 @@ def ReadBDD():
         cursor = conn.cursor()
 
         # Exécuter la requête SQL pour récupérer les données de l'utilisateur connecté
-        cursor.execute('SELECT * FROM perso WHERE id = ?', (user_id))
+        cursor.execute('SELECT * FROM perso WHERE id = ?', (user_id,))
         data = cursor.fetchall()
 
         # Fermer la connexion à la base de données
