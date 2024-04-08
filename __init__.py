@@ -75,28 +75,31 @@ def lecture():
   # Si l'utilisateur est authentifié
     return "<h2>Bravo, vous êtes authentifié</h2>"
 
+#empecher deux users d'avoir le même username
 
+def verify_credentials(username, password):
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM user WHERE login = ? AND password = ?', (username, password,))
+    user = cursor.fetchone()
+    conn.close()
+    return user
 
 @app.route('/authentification', methods=['GET', 'POST'])
 def authentification():
     if request.method == 'POST':
-        if request.form['username'] == 'admin' and request.form['password'] == 'password': # password à cacher par la suite
+        username = request.form['username']
+        password = request.form['password']
+        
+        user = verify_credentials(username, password)
+        
+        if user:
             session['authentifie'] = True
-
-            
-            conn = sqlite3.connect('database.db')
-            cursor = conn.cursor()
-            cursor.execute('SELECT id FROM user WHERE login = ? AND password = ?', (request.form['username'], request.form['password'],))
-            #cursor.execute('SELECT * FROM perso WHERE id = ?', (post_id,))
-            data = cursor.fetchall()
-            conn.close()
-
-            session['user_id'] = data
-            return redirect(url_for('lecture')) # Redirige vers la route lecture après l'authentification
+            session['user_id'] = user[0]  # Assuming user ID is the first column in your user table
+            return redirect(url_for('lecture'))
         else:
             return render_template('formulaire_authentification.html', error=True)
     return render_template('formulaire_authentification.html', error=False)
-
 
 
 @app.route('/enregistrer_client', methods=['GET'])
@@ -108,11 +111,9 @@ def enregistrer_client():
     login = request.form['login']
     password = request.form['password']
 
-    # Connexion à la base de données
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
 
-    # Exécution de la requête SQL pour insérer un nouveau client
     cursor.execute('INSERT INTO clients (login, password) VALUES (?, ?, ?)', (login, password))
     conn.commit()
     conn.close()
