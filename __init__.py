@@ -93,6 +93,37 @@ def authentification():
 
 
 
+@app.route('/enregistrer_client', methods=['GET'])
+def formulaire_client():
+    return render_template('formulaire.html')  # afficher le formulaire
+
+@app.route('/enregistrer_client', methods=['POST'])
+def enregistrer_client():
+    login = request.form['login']
+    password = request.form['password']
+
+    # Connexion à la base de données
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+
+    # Exécution de la requête SQL pour insérer un nouveau client
+    cursor.execute('INSERT INTO clients (login, password) VALUES (?, ?, ?)', (login, password))
+    conn.commit()
+    conn.close()
+    return redirect('/consultation/')  # Rediriger vers la page d'accueil après l'enregistrement
+                     
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
