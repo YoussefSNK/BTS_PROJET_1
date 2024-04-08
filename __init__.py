@@ -83,6 +83,8 @@ def authentification():
         # Vérifier les identifiants
         if request.form['username'] == 'admin' and request.form['password'] == 'password': # password à cacher par la suite
             session['authentifie'] = True
+
+            session['user_id'] = 0  # REMPLACER 0 PAR L'ID DE L'USER
             # Rediriger vers la route lecture après une authentification réussie
             return redirect(url_for('lecture'))
         else:
