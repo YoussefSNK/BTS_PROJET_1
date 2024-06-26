@@ -26,6 +26,87 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+
+
+
+
+@app.route('/')
+def ReadBDD():
+    if 'authentifie' in session and session['authentifie']:
+        user_id = session.get('user_id')
+
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM perso WHERE user_id = ?', (user_id,))
+        data = cursor.fetchall()
+        conn.close()
+
+        return render_template('read_data.html', data=data)
+    else:
+        return redirect(url_for('authentification'))
+
+
+
+@app.route('/sign_in', methods=['GET', 'POST'])
+def authentification():
+    if request.method == 'POST':
+        login = request.form['login']
+        password = request.form['password']
+        user = verify_credentials(login, password)
+        if user:
+            session['authentifie'] = True
+            session['user_id'] = user[0]  # Assuming user ID is the first column in your user table
+            return redirect(url_for('ReadBDD'))
+        else:
+            return render_template('signin.html', error=True)
+    return render_template('signin.html', error=False)
+
+@app.route('/sign_up', methods=['GET'])
+def formulaire_client():
+    return render_template('signup.html')
+
+@app.route('/sign_up', methods=['POST'])
+def enregistrer_client():
+    login = request.form['login']
+    password = request.form['password']
+
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('INSERT INTO user (login, password) VALUES (?, ?)', (login, password))
+    conn.commit()
+    conn.close()
+    user = verify_credentials(login, password)
+    if user:
+        session['authentifie'] = True
+        session['user_id'] = user[0]  # Assuming user ID is the first column in your user table
+        return redirect(url_for('ReadBDD'))
+    
+    return redirect('/')  # Rediriger vers la page d'accueil après l'enregistrement
+
+
+
+
+
+
+
+
+
+def verify_credentials(username, password):
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM user WHERE login = ? AND password = ?', (username, password,))
+    user = cursor.fetchone()
+    conn.close()
+    return user
+
+# -----------------------------------------------------------------------
+# -----------------------------------------------------------------------
+# -----------------------------------------------------------------------
+# -----------------------------------------------------------------------
+# -----------------------------------------------------------------------
+
+
+
 @app.route('/upload', methods=['POST'])
 def upload_file():
     # Vérifie si la requête POST contient un fichier
@@ -67,67 +148,7 @@ def uploaded_file(filename):
 
 ################################################
 
-@app.route('/lecture')
-def lecture():
-    if not est_authentifie():
-        # Rediriger vers la page d'authentification si l'utilisateur n'est pas authentifié
-        return redirect(url_for('authentification'))
-  # Si l'utilisateur est authentifié
-    return "<h2>Bravo, vous êtes authentifié</h2>"
-
 #empecher deux users d'avoir le même username
-
-def verify_credentials(username, password):
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM user WHERE login = ? AND password = ?', (username, password,))
-    user = cursor.fetchone()
-    conn.close()
-    return user
-
-@app.route('/authentification', methods=['GET', 'POST'])
-def authentification():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        
-        user = verify_credentials(username, password)
-        
-        if user:
-            session['authentifie'] = True
-            session['user_id'] = user[0]  # Assuming user ID is the first column in your user table
-            return redirect(url_for('lecture'))
-        else:
-            return render_template('formulaire_authentification.html', error=True)
-    return render_template('formulaire_authentification.html', error=False)
-
-
-@app.route('/enregistrer_client', methods=['GET'])
-def formulaire_client():
-    return render_template('formulaire.html')  # afficher le formulaire
-
-@app.route('/enregistrer_client', methods=['POST'])
-def enregistrer_client():
-    login = request.form['login']
-    password = request.form['password']
-
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-
-    cursor.execute('INSERT INTO user (login, password) VALUES (?, ?)', (login, password))
-    conn.commit()
-    conn.close()
-    return redirect('/consultation/')  # Rediriger vers la page d'accueil après l'enregistrement
-                     
-
-
-
-
-
-
-
-
-
 
 
 
@@ -145,14 +166,7 @@ def enregistrer_perso():
     cursor.execute('INSERT INTO perso (nom, licence, image) VALUES (?, ?, ?)', (nom, licence, "Genesect.png"))
     conn.commit()
     conn.close()
-    return redirect('/consultation/')
-
-
-
-
-
-
-
+    return redirect('/')
 
 @app.route('/enregistrer_et_uploader', methods=['GET'])
 def formulaire_perso():
@@ -161,47 +175,26 @@ def formulaire_perso():
 
 @app.route('/enregistrer_et_uploader', methods=['POST'])
 def enregistrer_et_uploader():
-    print("log 1")
     # Récupération des données du formulaire
     nom = request.form['nom']
     licence = request.form['licence']
     file = request.files['file']
-    print("log 2")
-
     # Connexion à la base de données
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
-    print("log 3")
-
-
-
     cursor.execute('SELECT id FROM perso ORDER BY id DESC LIMIT 1;')
     data = cursor.fetchone()
     max_id = data[0] if data else 0
-    print("log 5")
-
     # Vérification de l'image et enregistrement si elle est valide
     if file and allowed_file(file.filename):
-        print("log 5.1")
         extension = file.filename[-4:]
-        print("extension", extension)
         filename = secure_filename(f"{max_id + 1}{extension}")
-        print("filename = ", filename)
-        print("file =", file)
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        print("log 5.4")
-
-
     # Exécution de la requête SQL pour insérer un nouveau personnage
     cursor.execute('INSERT INTO perso (nom, licence, image) VALUES (?, ?, ?)', (nom, licence, filename))
-    print("log 4")
     conn.commit()
-    print("log 4.5")
     conn.close()
-    return redirect('/consultation/')  # Rediriger vers la page d'accueil après l'enregistrement
-
-
-
+    return redirect('/')  # Rediriger vers la page d'accueil après l'enregistrement
 
 # -------------------------------------------------------
 # ----------------------- Lecture -----------------------
@@ -215,33 +208,8 @@ def Readfiche(post_id):
     cursor.execute('SELECT * FROM perso WHERE id = ?', (post_id,))
     data = cursor.fetchall()
     conn.close()
-    
     # Rendre le template HTML et transmettre les données
     return render_template('read_data.html', data=data)
-
-@app.route('/consultation/')
-def ReadBDD():
-    # Vérifier si l'utilisateur est connecté
-    if 'authentifie' in session and session['authentifie']:
-        # Récupérer l'ID de l'utilisateur connecté
-        user_id = session.get('user_id')
-        print("ID de l'utilisateur connecté:", user_id)
-
-        # Connexion à la base de données
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
-
-        # Exécuter la requête SQL pour récupérer les données de l'utilisateur connecté
-        cursor.execute('SELECT * FROM perso WHERE user_id = ?', (user_id,))
-        data = cursor.fetchall()
-
-        # Fermer la connexion à la base de données
-        conn.close()
-
-        return render_template('read_data.html', data=data)
-    else:
-        # Rediriger vers la page d'authentification si l'utilisateur n'est pas connecté
-        return redirect(url_for('authentification'))
 
 
 
@@ -255,7 +223,7 @@ def recherche_id_max():
     return data
 
 
-@app.route('/')
+@app.route('/private')
 def hello_world():
     return render_template('hello.html')
 
