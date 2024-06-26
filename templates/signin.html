@@ -3,14 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='forms.css') }}">
     <title>Authentification</title>
 </head>
 <body>
-    <h2>Authentification</h2>
-    {% if error %}
-        <p style="color: red;">Identifiant ou mot de passe incorrect.</p>
-    {% endif %}
+
+
     <form action="{{ url_for('authentification') }}" method="post">
+        <h2>Authentification</h2>
+        {% if error %}
+            <p style="color: red;">Identifiant ou mot de passe incorrect.</p>
+        {% endif %}
         <label for="login">Identifiant:</label><br>
         <input type="login" id="login" name="login"><br>
         <label for="password">Mot de passe:</label><br>
