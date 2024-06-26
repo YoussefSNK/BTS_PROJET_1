@@ -31,13 +31,7 @@ def allowed_file(filename):
 @app.route('/', methods=['GET'])
 def return_home():
     if 'authentifie' in session and session['authentifie']:
-        user_id = session.get('user_id')
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
-        cursor.execute('SELECT * FROM perso WHERE user_id = ?', (user_id,))
-        data = cursor.fetchall()
-        conn.close()
-        return render_template('home.html', data=data)
+        return render_template('home.html')
     else:
         return redirect(url_for('authentification'))
 
@@ -93,7 +87,7 @@ def ReadBDD():
 
         conn = sqlite3.connect('database.db')
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM perso WHERE user_id = ?', (user_id,))
+        cursor.execute('SELECT nom, ratio, largeur, hauteur, image FROM image WHERE user_id = ? AND petite_image = 0', (user_id,))
         data = cursor.fetchall()
         conn.close()
 
@@ -141,11 +135,10 @@ def upload_file():
     # Récupère la valeur de l'ID maximal
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT id FROM perso ORDER BY id DESC LIMIT 1;')
+    cursor.execute('SELECT id FROM perso ORDER BY id DESC LIMIT 1;') #moyen de refactor en foutant ça dans max id
     data = cursor.fetchone()
     conn.close()
     max_id = data[0] if data else 0  # Si aucune donnée n'est retournée, max_id = 0
-
 
     #ici on insert into avec le user, le nom du fichier
     if file and allowed_file(file.filename):
@@ -171,24 +164,6 @@ def uploaded_file(filename):
 ################################################
 
 #empecher deux users d'avoir le même username
-
-
-
-
-
-
-@app.route('/enregistrer_perso', methods=['POST'])
-def enregistrer_perso():
-    nom = request.form['nom']
-    licence = request.form['licence']
-
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-
-    cursor.execute('INSERT INTO perso (nom, licence, image) VALUES (?, ?, ?)', (nom, licence, "Genesect.png"))
-    conn.commit()
-    conn.close()
-    return redirect('/')
 
 @app.route('/enregistrer_et_uploader', methods=['GET'])
 def formulaire_perso():

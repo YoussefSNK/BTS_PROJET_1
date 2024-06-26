@@ -10,11 +10,13 @@
 <body>
     {% include 'header.html' %}
     <h1>Liste des Personnages</h1>
+    <a href="/poster_list"><button>Ajouter une image</button></a>
     <table>
         <tr>
-            <th>ID</th>
             <th>Nom</th>
-            <th>Licence</th>
+            <th>Ratio</th>
+            <th>Largeur</th>
+            <th>Hauteur</th>
             <th>Lien d'image</th>
         </tr>
         {% for row in data %}
@@ -22,7 +24,8 @@
             <td>{{ row[0] }}</td>
             <td>{{ row[1] }}</td>
             <td>{{ row[2] }}</td>
-            <td> <img src="{{ url_for('static', filename='images/' + row[3]) }}" class="image" /> </td>
+            <td>{{ row[3] }}</td>
+            <td> <img src="{{ url_for('static', filename='images/' + row[4]) }}" class="image" /> </td>
             <!-- <-- <td> <img src="{{ url_for('static', filename=' {{ row[3] }} ') }}"/></td> -->
         </tr>
         {% endfor %}
