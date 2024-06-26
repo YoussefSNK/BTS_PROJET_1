@@ -85,6 +85,12 @@ def enregistrer_client():
 
 
 
+@app.route('/sign_out', methods=['GET'])
+def deconnexion_utilisateur():
+    session['authentifie'] = False
+    session['user_id'] = ""  # Assuming user ID is the first column in your user table
+    return redirect('/')
+
 
 
 
