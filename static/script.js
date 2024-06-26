@@ -90,3 +90,29 @@ function sortTable(columnIndex) {
         }
     }
 }
+
+function filterByRatio() {
+    var inputRatio = parseFloat(document.getElementById("ratio-input").value);
+    if (isNaN(inputRatio)) {
+        alert("Veuillez entrer un ratio valide.");
+        return;
+    }
+
+    var table = document.getElementById("poster-table");
+    var rows = Array.from(table.rows).slice(1); // Exclude header row
+
+    // Filter rows based on the closest ratio
+    rows.sort(function(a, b) {
+        var ratioA = parseFloat(a.cells[1].innerText);
+        var ratioB = parseFloat(b.cells[1].innerText);
+
+        return Math.abs(ratioA - inputRatio) - Math.abs(ratioB - inputRatio);
+    });
+
+    // Append sorted rows back to the table
+    var tbody = table.querySelector('tbody');
+    tbody.innerHTML = '';
+    rows.forEach(function(row) {
+        tbody.appendChild(row);
+    });
+}

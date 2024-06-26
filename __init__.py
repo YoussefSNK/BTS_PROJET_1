@@ -88,7 +88,7 @@ def ReadBDD():
 
         conn = sqlite3.connect('database.db')
         cursor = conn.cursor()
-        cursor.execute('SELECT nom, ratio, largeur, hauteur, image_link FROM image WHERE user_id = ?', (user_id,))
+        cursor.execute('SELECT nom, ratio, largeur, hauteur, image_link, id FROM image WHERE user_id = ?', (user_id,))
         data = cursor.fetchall()
         conn.close()
 
@@ -104,8 +104,6 @@ def ReadBDD():
 @app.route('/upload_poster', methods=['GET'])
 def formulaire_perso():
     return render_template('new_poster_form.html')
-
-
 
 @app.route('/upload_poster', methods=['POST'])
 def upload_poster():
@@ -127,7 +125,6 @@ def upload_poster():
             largeur, hauteur = img.size
         ratio = largeur/hauteur
 
-        # Exécution de la requête SQL pour insérer un nouveau personnage
         cursor.execute('''
                 INSERT INTO image (nom, ratio, largeur, hauteur, image_link, user_id)
                 VALUES (?, ?, ?, ?, ?, ?)
@@ -135,6 +132,32 @@ def upload_poster():
         conn.commit()
     conn.close()
     return redirect('/poster_list')
+
+
+@app.route('/delete_poster/<int:image_id>', methods=['POST'])
+def delete_poster(image_id):
+    if request.form.get('_method') == 'DELETE':
+        if 'authentifie' in session and session['authentifie']:
+            user_id = session.get('user_id')
+
+            conn = sqlite3.connect('database.db')
+            cursor = conn.cursor()
+            cursor.execute('SELECT image_link FROM image WHERE id = ? AND user_id = ?', (image_id, user_id))
+            data = cursor.fetchone()
+
+            if data:
+                image_path = os.path.join(app.config['UPLOAD_FOLDER'], data[0])
+                if os.path.exists(image_path):
+                    os.remove(image_path)
+
+                cursor.execute('DELETE FROM image WHERE id = ? AND user_id = ?', (image_id, user_id))
+                conn.commit()
+
+            conn.close()
+            return redirect('/poster_list')
+        else:
+            return redirect('/')
+    return 'Method Not Allowed', 405
 
 
 

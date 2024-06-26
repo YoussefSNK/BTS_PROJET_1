@@ -10,12 +10,29 @@
             cursor: pointer;
             text-decoration: underline;
         }
+        .delete-icon {
+            cursor: pointer;
+            color: red;
+            font-weight: bold;
+        }
+        .delete-form {
+            display: inline;
+        }
     </style>
 </head>
 <body>
     {% include 'header.html' %}
     <h1>Liste des Personnages</h1>
     <a href="/upload_poster"><button>Ajouter une image</button></a>
+
+    <div>
+        <label for="ratio-input">Chercher par ratio : </label>
+        <input type="number" id="ratio-input" step="0.01">
+        <button onclick="filterByRatio()">Rechercher</button>
+    </div>
+
+
+
     <table id="poster-table">
         <thead>
             <tr>
@@ -24,6 +41,7 @@
                 <th class="sortable" onclick="sortTable(2)">Largeur</th>
                 <th class="sortable" onclick="sortTable(3)">Hauteur</th>
                 <th>Lien d'image</th>
+                <th>Supprimer</th>
             </tr>
         </thead>
         <tbody>
@@ -34,6 +52,12 @@
                 <td>{{ row[2] }}</td>
                 <td>{{ row[3] }}</td>
                 <td><img src="{{ url_for('static', filename='images/' + row[4]) }}" class="image" /></td>
+                <td>
+                    <form class="delete-form" action="/delete_poster/{{ row[5] }}" method="post" onsubmit="return confirm('Voulez-vous vraiment supprimer cette image ?');">
+                        <input type="hidden" name="_method" value="DELETE">
+                        <button type="submit" class="delete-icon">&times;</button>
+                    </form>
+                </td>            
             </tr>
             {% endfor %}
         </tbody>
