@@ -75,23 +75,31 @@ def lecture():
   # Si l'utilisateur est authentifié
     return "<h2>Bravo, vous êtes authentifié</h2>"
 
+#empecher deux users d'avoir le même username
 
+def verify_credentials(username, password):
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM user WHERE login = ? AND password = ?', (username, password,))
+    user = cursor.fetchone()
+    conn.close()
+    return user
 
 @app.route('/authentification', methods=['GET', 'POST'])
 def authentification():
     if request.method == 'POST':
-        # Vérifier les identifiants
-        if request.form['username'] == 'admin' and request.form['password'] == 'password': # password à cacher par la suite
+        username = request.form['username']
+        password = request.form['password']
+        
+        user = verify_credentials(username, password)
+        
+        if user:
             session['authentifie'] = True
-
-            session['user_id'] = 0  # REMPLACER 0 PAR L'ID DE L'USER
-            # Rediriger vers la route lecture après une authentification réussie
+            session['user_id'] = user[0]  # Assuming user ID is the first column in your user table
             return redirect(url_for('lecture'))
         else:
-            # Afficher un message d'erreur si les identifiants sont incorrects
             return render_template('formulaire_authentification.html', error=True)
     return render_template('formulaire_authentification.html', error=False)
-
 
 
 @app.route('/enregistrer_client', methods=['GET'])
@@ -103,12 +111,10 @@ def enregistrer_client():
     login = request.form['login']
     password = request.form['password']
 
-    # Connexion à la base de données
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
 
-    # Exécution de la requête SQL pour insérer un nouveau client
-    cursor.execute('INSERT INTO clients (login, password) VALUES (?, ?, ?)', (login, password))
+    cursor.execute('INSERT INTO user (login, password) VALUES (?, ?)', (login, password))
     conn.commit()
     conn.close()
     return redirect('/consultation/')  # Rediriger vers la page d'accueil après l'enregistrement
@@ -191,37 +197,6 @@ def enregistrer_et_uploader():
     print("log 4")
     conn.commit()
     print("log 4.5")
-
-    # Récupération de l'ID du personnage nouvellement inséré
-
-
-
-
-
-
-
-    # Vérification de l'image et enregistrement si elle est valide
-    # if file and allowed_file(file.filename):
-    #     print("log 5.1")
-    #     extension = file.filename[-4:]
-    #     print("extension", extension)
-    #     filename = secure_filename(f"{max_id}{extension}")
-    #     print("filename = ", filename)
-    #     print("file =", file)
-    #     file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-    #     print("log 5.4")
-    #     # Mettre à jour le nom de l'image dans la base de données
-    #     cursor.execute('UPDATE perso SET image = ? WHERE id = ?', (filename, max_id))
-    #     print("log 5.5")
-    #     conn.commit()
-    #     print("log 6")
-    # else:
-    #     print("log 7")
-    #     # Supprimer l'entrée si aucune image valide n'est fournie
-    #     cursor.execute('DELETE FROM perso WHERE id = ?', (max_id,))
-    #     conn.commit()
-    #     return "Erreur: Format de fichier non pris en charge."
-
     conn.close()
     return redirect('/consultation/')  # Rediriger vers la page d'accueil après l'enregistrement
 
@@ -270,13 +245,6 @@ def ReadBDD():
 
 
 
-
-
-
-
-
-
-
 @app.route('/max_id')
 def recherche_id_max():
     conn = sqlite3.connect('database.db')
@@ -285,11 +253,6 @@ def recherche_id_max():
     data = cursor.fetchall()
     conn.close()
     return data
-
-
-
-
-
 
 
 @app.route('/')
