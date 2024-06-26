@@ -28,38 +28,20 @@ def allowed_file(filename):
 
 
 
-
-
-@app.route('/')
-def ReadBDD():
+@app.route('/', methods=['GET'])
+def return_home():
     if 'authentifie' in session and session['authentifie']:
         user_id = session.get('user_id')
-
         conn = sqlite3.connect('database.db')
         cursor = conn.cursor()
         cursor.execute('SELECT * FROM perso WHERE user_id = ?', (user_id,))
         data = cursor.fetchall()
         conn.close()
-
-        return render_template('read_data.html', data=data)
+        return render_template('home.html', data=data)
     else:
         return redirect(url_for('authentification'))
 
 
-
-@app.route('/sign_in', methods=['GET', 'POST'])
-def authentification():
-    if request.method == 'POST':
-        login = request.form['login']
-        password = request.form['password']
-        user = verify_credentials(login, password)
-        if user:
-            session['authentifie'] = True
-            session['user_id'] = user[0]  # Assuming user ID is the first column in your user table
-            return redirect(url_for('ReadBDD'))
-        else:
-            return render_template('signin.html', error=True)
-    return render_template('signin.html', error=False)
 
 @app.route('/sign_up', methods=['GET'])
 def formulaire_client():
@@ -83,13 +65,47 @@ def enregistrer_client():
     
     return redirect('/')  # Rediriger vers la page d'accueil après l'enregistrement
 
-
+@app.route('/sign_in', methods=['GET', 'POST'])
+def authentification():
+    if request.method == 'POST':
+        login = request.form['login']
+        password = request.form['password']
+        user = verify_credentials(login, password)
+        if user:
+            session['authentifie'] = True
+            session['user_id'] = user[0]  # Assuming user ID is the first column in your user table
+            return redirect('/')
+        else:
+            return render_template('signin.html', error=True)
+    return render_template('signin.html', error=False)
 
 @app.route('/sign_out', methods=['GET'])
 def deconnexion_utilisateur():
     session['authentifie'] = False
     session['user_id'] = ""  # Assuming user ID is the first column in your user table
     return redirect('/')
+
+
+@app.route('/poster_list')
+def ReadBDD():
+    if 'authentifie' in session and session['authentifie']:
+        user_id = session.get('user_id')
+
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM perso WHERE user_id = ?', (user_id,))
+        data = cursor.fetchall()
+        conn.close()
+
+        return render_template('read_data.html', data=data)
+    else:
+        return redirect('/')
+
+
+
+
+
+
 
 
 
