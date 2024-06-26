@@ -6,16 +6,14 @@
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='header.css') }}">
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='forms.css') }}">
     <script src="{{ url_for('static', filename='script.js') }}"></script>
-    <title>Formulaire d'enregistrement d'une imagio</title>
+    <title>Formulaire d'enregistrement d'une image</title>
 </head>
 <body>
     {% include 'header.html' %}
-    <form action="/enregistrer_et_uploader" method="POST" enctype="multipart/form-data">
-        <h1>Enregistrer une nouvelle imagio</h1>
+    <form action="/upload_poster" method="POST" enctype="multipart/form-data">
+        <h1>Enregistrer une nouvelle image</h1>
         <label for="nom">Nom :</label>
         <input type="text" id="nom" name="nom" required>
-        <label for="licence">Licence :</label>
-        <input type="text" id="licence" name="licence" required>
         <input type="file" name="file">
         <button type="submit">Enregistrer</button>
     </form>

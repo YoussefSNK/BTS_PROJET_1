@@ -1,34 +1,43 @@
-<!DOCTYPE>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='header.css') }}">
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='stylo.css') }}">
     <title>Perso</title>
+    <style>
+        th.sortable:hover {
+            cursor: pointer;
+            text-decoration: underline;
+        }
+    </style>
 </head>
 <body>
     {% include 'header.html' %}
     <h1>Liste des Personnages</h1>
-    <a href="/poster_list"><button>Ajouter une image</button></a>
-    <table>
-        <tr>
-            <th>Nom</th>
-            <th>Ratio</th>
-            <th>Largeur</th>
-            <th>Hauteur</th>
-            <th>Lien d'image</th>
-        </tr>
-        {% for row in data %}
-        <tr>
-            <td>{{ row[0] }}</td>
-            <td>{{ row[1] }}</td>
-            <td>{{ row[2] }}</td>
-            <td>{{ row[3] }}</td>
-            <td> <img src="{{ url_for('static', filename='images/' + row[4]) }}" class="image" /> </td>
-            <!-- <-- <td> <img src="{{ url_for('static', filename=' {{ row[3] }} ') }}"/></td> -->
-        </tr>
-        {% endfor %}
+    <a href="/upload_poster"><button>Ajouter une image</button></a>
+    <table id="poster-table">
+        <thead>
+            <tr>
+                <th class="sortable" onclick="sortTable(0)">Nom</th>
+                <th class="sortable" onclick="sortTable(1)">Ratio</th>
+                <th class="sortable" onclick="sortTable(2)">Largeur</th>
+                <th class="sortable" onclick="sortTable(3)">Hauteur</th>
+                <th>Lien d'image</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data %}
+            <tr>
+                <td>{{ row[0] }}</td>
+                <td>{{ row[1] }}</td>
+                <td>{{ row[2] }}</td>
+                <td>{{ row[3] }}</td>
+                <td><img src="{{ url_for('static', filename='images/' + row[4]) }}" class="image" /></td>
+            </tr>
+            {% endfor %}
+        </tbody>
     </table>
+
 </body>
 </html>

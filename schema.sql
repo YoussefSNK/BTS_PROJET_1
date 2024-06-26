@@ -5,7 +5,7 @@ CREATE TABLE image (
     ratio REAL NOT NULL,
     largeur INTEGER NOT NULL,
     hauteur INTEGER NOT NULL,
-    image TEXT NOT NULL,
+    image_link TEXT NOT NULL,
     user_id INTEGER NOT NULL
 );
 

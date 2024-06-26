@@ -81,21 +81,20 @@
 
 
 body {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
     background: #f0f0f0;
     margin: 0;
+    padding: 0;
 }
 
 .title-container {
     position: fixed;
-    top: 200px;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
-    font-size: 150px;
+    font-size: 100px;
     font-weight: bold;
-    transform: translateY(-200px); /* Ajuste la position verticale du texte */
+    padding-top: 20px; /* Ajuste la position verticale du texte */
 }
 
 .char {
@@ -115,4 +114,4 @@ body {
 .char:nth-child(9) { transform: rotate(10deg) translateY(15px); }
 .char:nth-child(10) { transform: rotate(15deg) translateY(25px); }
 .char:nth-child(11) { transform: rotate(20deg) translateY(35px); }
-.char:nth-child(12) { transform: rotate(25deg) translateY(45px); }
+.char:nth-child(12) { transform: rotate(25deg) translateY(55px); }

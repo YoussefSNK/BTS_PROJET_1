@@ -5,6 +5,7 @@ from werkzeug.utils import secure_filename
 from urllib.request import urlopen
 import sqlite3
 import os
+from PIL import Image
 
 
 app = Flask(__name__)                                                                                                                  
@@ -87,7 +88,7 @@ def ReadBDD():
 
         conn = sqlite3.connect('database.db')
         cursor = conn.cursor()
-        cursor.execute('SELECT nom, ratio, largeur, hauteur, image FROM image WHERE user_id = ?', (user_id,))
+        cursor.execute('SELECT nom, ratio, largeur, hauteur, image_link FROM image WHERE user_id = ?', (user_id,))
         data = cursor.fetchall()
         conn.close()
 
@@ -108,24 +109,30 @@ def formulaire_perso():
 
 @app.route('/upload_poster', methods=['POST'])
 def upload_poster():
-    # Récupération des données du formulaire
     nom = request.form['nom']
-    licence = request.form['licence']
     file = request.files['file']
-    # Connexion à la base de données
+
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT id FROM perso ORDER BY id DESC LIMIT 1;')
+    cursor.execute('SELECT id FROM image ORDER BY id DESC LIMIT 1;')
     data = cursor.fetchone()
     max_id = data[0] if data else 0
-    # Vérification de l'image et enregistrement si elle est valide
+
     if file and allowed_file(file.filename):
         extension = file.filename[-4:]
         filename = secure_filename(f"{max_id + 1}{extension}")
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-    # Exécution de la requête SQL pour insérer un nouveau personnage
-    cursor.execute('INSERT INTO perso (nom, licence, image) VALUES (?, ?, ?)', (nom, licence, filename))
-    conn.commit()
+
+        with Image.open(os.path.join(app.config['UPLOAD_FOLDER'], filename)) as img:
+            largeur, hauteur = img.size
+        ratio = largeur/hauteur
+
+        # Exécution de la requête SQL pour insérer un nouveau personnage
+        cursor.execute('''
+                INSERT INTO image (nom, ratio, largeur, hauteur, image_link, user_id)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (nom, ratio, largeur, hauteur, filename, session.get('user_id')))
+        conn.commit()
     conn.close()
     return redirect('/poster_list')
 
