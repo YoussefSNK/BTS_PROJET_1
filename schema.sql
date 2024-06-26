@@ -6,8 +6,7 @@ CREATE TABLE image (
     largeur INTEGER NOT NULL,
     hauteur INTEGER NOT NULL,
     image TEXT NOT NULL,
-    user_id INTEGER NOT NULL,
-    petite_image INTEGER NOT NULL
+    user_id INTEGER NOT NULL
 );
 
 DROP TABLE IF EXISTS user;

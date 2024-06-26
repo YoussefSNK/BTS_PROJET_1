@@ -87,7 +87,7 @@ def ReadBDD():
 
         conn = sqlite3.connect('database.db')
         cursor = conn.cursor()
-        cursor.execute('SELECT nom, ratio, largeur, hauteur, image FROM image WHERE user_id = ? AND petite_image = 0', (user_id,))
+        cursor.execute('SELECT nom, ratio, largeur, hauteur, image FROM image WHERE user_id = ?', (user_id,))
         data = cursor.fetchall()
         conn.close()
 
@@ -100,7 +100,34 @@ def ReadBDD():
 
 
 
+@app.route('/upload_poster', methods=['GET'])
+def formulaire_perso():
+    return render_template('new_poster_form.html')
 
+
+
+@app.route('/upload_poster', methods=['POST'])
+def upload_poster():
+    # Récupération des données du formulaire
+    nom = request.form['nom']
+    licence = request.form['licence']
+    file = request.files['file']
+    # Connexion à la base de données
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT id FROM perso ORDER BY id DESC LIMIT 1;')
+    data = cursor.fetchone()
+    max_id = data[0] if data else 0
+    # Vérification de l'image et enregistrement si elle est valide
+    if file and allowed_file(file.filename):
+        extension = file.filename[-4:]
+        filename = secure_filename(f"{max_id + 1}{extension}")
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+    # Exécution de la requête SQL pour insérer un nouveau personnage
+    cursor.execute('INSERT INTO perso (nom, licence, image) VALUES (?, ?, ?)', (nom, licence, filename))
+    conn.commit()
+    conn.close()
+    return redirect('/poster_list')
 
 
 
@@ -123,32 +150,8 @@ def verify_credentials(username, password):
 
 
 
-@app.route('/upload', methods=['POST'])
-def upload_file():
-    # Vérifie si la requête POST contient un fichier
-    if 'file' not in request.files:
-        return redirect(request.url)
-    file = request.files['file']
-    # Vérifie si aucun fichier n'a été sélectionné
-    if file.filename == '':
-        return redirect(request.url)
-    # Récupère la valeur de l'ID maximal
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT id FROM perso ORDER BY id DESC LIMIT 1;') #moyen de refactor en foutant ça dans max id
-    data = cursor.fetchone()
-    conn.close()
-    max_id = data[0] if data else 0  # Si aucune donnée n'est retournée, max_id = 0
 
-    #ici on insert into avec le user, le nom du fichier
-    if file and allowed_file(file.filename):
-        extension = file.filename[-4:]
-        filename = secure_filename(f"{max_id + 1}{extension}")
-        print("log nul", file.filename)
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        return redirect(url_for('uploaded_file', filename=filename))
-    else:
-        return "Format de fichier non pris en charge."
+
 
 
 
@@ -165,33 +168,6 @@ def uploaded_file(filename):
 
 #empecher deux users d'avoir le même username
 
-@app.route('/enregistrer_et_uploader', methods=['GET'])
-def formulaire_perso():
-    return render_template('formulaire_ajout_image.html')
-
-
-@app.route('/enregistrer_et_uploader', methods=['POST'])
-def enregistrer_et_uploader():
-    # Récupération des données du formulaire
-    nom = request.form['nom']
-    licence = request.form['licence']
-    file = request.files['file']
-    # Connexion à la base de données
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT id FROM perso ORDER BY id DESC LIMIT 1;')
-    data = cursor.fetchone()
-    max_id = data[0] if data else 0
-    # Vérification de l'image et enregistrement si elle est valide
-    if file and allowed_file(file.filename):
-        extension = file.filename[-4:]
-        filename = secure_filename(f"{max_id + 1}{extension}")
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-    # Exécution de la requête SQL pour insérer un nouveau personnage
-    cursor.execute('INSERT INTO perso (nom, licence, image) VALUES (?, ?, ?)', (nom, licence, filename))
-    conn.commit()
-    conn.close()
-    return redirect('/')  # Rediriger vers la page d'accueil après l'enregistrement
 
 # -------------------------------------------------------
 # ----------------------- Lecture -----------------------
