@@ -4,9 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
     <title>Formulaire d'enregistrement d'une imagio</title>
 </head>
 <body>
+    {% include 'quarter_circle.html' %}
     <form action="/enregistrer_et_uploader" method="POST" enctype="multipart/form-data">
         <h1>Enregistrer une nouvelle imagio</h1>
         <label for="nom">Nom :</label>

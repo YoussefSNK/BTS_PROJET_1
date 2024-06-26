@@ -48,3 +48,86 @@ button[type="submit"] {
 button[type="submit"]:hover {
     background-color: #0056b3;
 }
+
+
+
+
+
+
+
+
+
+
+/* Style pour le quart de cercle */
+#quarter-circle {
+    width: 100px;
+    height: 100px;
+    position: fixed;
+    top: 0;
+    right: 0;
+    background: red;
+    border-bottom-left-radius: 100px;
+    transition: background 0.5s ease, width 0.5s ease, height 0.5s ease, border-radius 0.5s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden; /* Pour que les éléments cachés ne soient pas visibles */
+}
+
+/* Changement de couleur au clic */
+#quarter-circle.clicked {
+    background: blue;
+    width: 100px;
+    height: 200px;
+    border-radius: 0px 0px 0px 10px;
+}
+
+/* Effet de survol */
+#quarter-circle:hover {
+    background: orange;
+}
+
+/* Style pour l'icône */
+#quarter-circle img {
+    width: 50px;
+    height: 50px;
+    transition: opacity 0.5s ease; /* Transition pour l'icône */
+    position: absolute;
+}
+
+/* Icône masquée */
+#quarter-circle img.hidden {
+    opacity: 0;
+}
+
+/* Styles pour les boutons */
+#quarter-circle .buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    opacity: 0; /* Masquer les boutons par défaut */
+    transition: opacity 0.5s ease; /* Transition pour les boutons */
+    position: absolute; /* Position absolue pour ne pas prendre de place */
+    top: 50%;
+    transform: translateY(-50%); /* Centrer verticalement */
+    pointer-events: none; /* Désactiver les interactions par défaut */
+}
+
+#quarter-circle.clicked .buttons {
+    opacity: 1; /* Afficher les boutons lorsque .clicked est appliqué */
+    transition-delay: 0s; /* Aucun délai lors de l'apparition */
+    pointer-events: auto; /* Activer les interactions lorsque les boutons sont visibles */
+}
+
+#quarter-circle .buttons button {
+    margin: 5px;
+    padding: 10px;
+    border: none;
+    background: lightgray;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+#quarter-circle .buttons button:hover {
+    background: darkgray;
+}
