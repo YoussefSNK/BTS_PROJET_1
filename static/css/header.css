@@ -17,7 +17,6 @@
 
 /* Changement de couleur au clic */
 #quarter-circle.clicked {
-    background: blue;
     width: 100px;
     height: 200px;
     border-radius: 0px 0px 0px 10px;
@@ -72,11 +71,6 @@
 #quarter-circle .buttons button:hover {
     background: darkgray;
 }
-
-
-
-
-
 
 
 

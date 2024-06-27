@@ -39,6 +39,9 @@
         
         .left-panel h2 {
             margin-top: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         
         .left-panel ul {
@@ -59,6 +62,30 @@
             margin-top: 0;
         }
         
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+
+        .form-group button {
+            padding: 10px 20px;
+            background-color: green;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
     </style>
 </head>
 <body>
@@ -71,12 +98,48 @@
                 <li><a href="/poster_creator/{{ row[3] }}">{{ row[0] }} ({{ row[1] }} x {{ row[2] }})<a></li>
                 {% endfor %}
             </ul>
+
+            <div class="form-popup" id="addForm">
+                <form action="{{ url_for('add_list') }}" method="POST">
+                    <h2>Ajouter une nouvelle liste</h2>
+                    <input type="text" name="nom" placeholder="Nom" required>
+                    <input type="number" name="largeur" placeholder="Largeur" required>
+                    <input type="number" name="hauteur" placeholder="Hauteur" required>
+                    <button type="submit">Ajouter</button>
+                    <button type="button" class="close-btn" onclick="closeForm()">Annuler</button>
+                </form>
+            </div>
+
+
         </div>
         <div class="right-panel">
-            <h2>Formulaire</h2>
-            <!-- Form content goes here -->
+            <h2>Créer une mosaïque</h2>
+            <form action="{{ url_for('generate_mosaic') }}" method="POST">
+                <div class="form-group">
+                    <label for="liste">Liste</label>
+                    <select name="liste" id="liste" required>
+                        {% for row in data %}
+                        <option value="{{ row[3] }}">{{ row[0] }} ({{ row[1] }} x {{ row[2] }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="ratio">Ratio (e.g., 16/9)</label>
+                    <input type="text" name="ratio" id="ratio" placeholder="Ratio" required>
+                </div>
+                <div class="form-group">
+                    <label for="height">Hauteur (en pixels)</label>
+                    <input type="number" name="height" id="height" placeholder="Hauteur" required>
+                </div>
+                <div class="form-group">
+                    <button type="submit">Générer</button>
+                </div>
+
+
+
+
+            </form>
         </div>
     </div>
 </body>
 </html>
-src=

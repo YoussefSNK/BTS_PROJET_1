@@ -1,5 +1,4 @@
-from flask import Flask, render_template_string, render_template, jsonify, request, redirect, url_for, session
-from flask import json
+from flask import Flask, render_template, request, redirect, url_for, session
 from werkzeug.utils import secure_filename
 #from flask_uploads import UploadSet, configure_uploads, IMAGES
 from urllib.request import urlopen
@@ -7,6 +6,7 @@ import sqlite3
 import os
 from PIL import Image
 
+from datetime import datetime
 
 app = Flask(__name__)                                                                                                                  
 app.secret_key = b'_5#y2L"F4Q8z\n\xec]/'  # Clé secrète pour les sessions
@@ -15,13 +15,10 @@ app.secret_key = b'_5#y2L"F4Q8z\n\xec]/'  # Clé secrète pour les sessions
 def est_authentifie():
     return session.get('authentifie')
 
-################################### Code de Boris
 
-# Répertoire où les images téléchargées seront sauvegardées
 UPLOAD_FOLDER = './static/images'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# Extensions d'images autorisées
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
 def allowed_file(filename):
@@ -47,7 +44,7 @@ def enregistrer_client():
     login = request.form['login']
     password = request.form['password']
 
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect('database/database.db')
     cursor = conn.cursor()
     cursor.execute('INSERT INTO user (login, password) VALUES (?, ?)', (login, password))
     conn.commit()
@@ -55,10 +52,10 @@ def enregistrer_client():
     user = verify_credentials(login, password)
     if user:
         session['authentifie'] = True
-        session['user_id'] = user[0]  # Assuming user ID is the first column in your user table
+        session['user_id'] = user[0] 
         return redirect(url_for('ReadBDD'))
     
-    return redirect('/')  # Rediriger vers la page d'accueil après l'enregistrement
+    return redirect('/')
 
 @app.route('/sign_in', methods=['GET', 'POST'])
 def authentification():
@@ -68,7 +65,7 @@ def authentification():
         user = verify_credentials(login, password)
         if user:
             session['authentifie'] = True
-            session['user_id'] = user[0]  # Assuming user ID is the first column in your user table
+            session['user_id'] = user[0] 
             return redirect('/')
         else:
             return render_template('signin.html', error=True)
@@ -77,7 +74,7 @@ def authentification():
 @app.route('/sign_out', methods=['GET'])
 def deconnexion_utilisateur():
     session['authentifie'] = False
-    session['user_id'] = ""  # Assuming user ID is the first column in your user table
+    session['user_id'] = "" 
     return redirect('/')
 
 
@@ -86,7 +83,7 @@ def ReadBDD():
     if 'authentifie' in session and session['authentifie']:
         user_id = session.get('user_id')
 
-        conn = sqlite3.connect('database.db')
+        conn = sqlite3.connect('database/database.db')
         cursor = conn.cursor()
         cursor.execute('SELECT nom, ratio, largeur, hauteur, image_link, id FROM image WHERE user_id = ?', (user_id,))
         data = cursor.fetchall()
@@ -110,7 +107,7 @@ def upload_poster():
     nom = request.form['nom']
     file = request.files['file']
 
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect('database/database.db')
     cursor = conn.cursor()
     cursor.execute('SELECT id FROM image ORDER BY id DESC LIMIT 1;')
     data = cursor.fetchone()
@@ -140,7 +137,7 @@ def delete_poster(image_id):
         if 'authentifie' in session and session['authentifie']:
             user_id = session.get('user_id')
 
-            conn = sqlite3.connect('database.db')
+            conn = sqlite3.connect('database/database.db')
             cursor = conn.cursor()
             cursor.execute('SELECT image_link FROM image WHERE id = ? AND user_id = ?', (image_id, user_id))
             data = cursor.fetchone()
@@ -168,7 +165,7 @@ def list_and_create():
     if 'authentifie' in session and session['authentifie']:
         user_id = session.get('user_id')
 
-        conn = sqlite3.connect('database.db')
+        conn = sqlite3.connect('database/database.db')
         cursor = conn.cursor()
         cursor.execute('SELECT nom, largeur, hauteur, id FROM liste WHERE user_id = ?', (user_id,))
         data = cursor.fetchall()
@@ -189,7 +186,7 @@ def see_list(liste_id):
     if 'authentifie' in session and session['authentifie']:
         user_id = session.get('user_id')
 
-        conn = sqlite3.connect('database.db')
+        conn = sqlite3.connect('database/database.db')
         cursor = conn.cursor()
         cursor.execute('SELECT image_link, id FROM little_image WHERE liste_id = ?', (liste_id,))
         data = cursor.fetchall()
@@ -199,6 +196,23 @@ def see_list(liste_id):
         return redirect('/')
 
 
+@app.route('/add_list', methods=['POST'])
+def add_list():
+    if 'authentifie' in session and session['authentifie']:
+        user_id = session.get('user_id')
+        nom = request.form['nom']
+        largeur = request.form['largeur']
+        hauteur = request.form['hauteur']
+
+        conn = sqlite3.connect('database/database.db')
+        cursor = conn.cursor()
+        cursor.execute('INSERT INTO liste (nom, largeur, hauteur, user_id) VALUES (?, ?, ?, ?)', (nom, largeur, hauteur, user_id))
+        conn.commit()
+        conn.close()
+
+        return redirect('/poster_creator')
+    else:
+        return redirect('/')
 
 
 
@@ -206,7 +220,7 @@ def see_list(liste_id):
 @app.route('/delete_image/<int:image_id>', methods=['POST'])
 def delete_image(image_id):
     if 'authentifie' in session and session['authentifie']:
-        conn = sqlite3.connect('database.db')
+        conn = sqlite3.connect('database/database.db')
         cursor = conn.cursor()
         cursor.execute('DELETE FROM little_image WHERE id = ?', (image_id,))
         conn.commit()
@@ -224,7 +238,7 @@ def upload_images(liste_id):
     if 'authentifie' in session and session['authentifie']:
         user_id = session.get('user_id')
 
-        conn = sqlite3.connect('database.db')
+        conn = sqlite3.connect('database/database.db')
         cursor = conn.cursor()
         cursor.execute('SELECT largeur, hauteur FROM liste WHERE id = ?', (liste_id,))
         dimensions = cursor.fetchone()
@@ -233,7 +247,6 @@ def upload_images(liste_id):
         if not list_width or not list_height:
             return "Dimensions de la liste introuvables.", 400
 
-        # Obtenir l'ID maximum actuel de la table little_image
         cursor.execute('SELECT id FROM little_image ORDER BY id DESC LIMIT 1;')
         max_id_data = cursor.fetchone()
         max_id = max_id_data[0] if max_id_data else 0
@@ -241,20 +254,17 @@ def upload_images(liste_id):
         files = request.files.getlist('files')
         for file in files:
             if file and allowed_file(file.filename):
-                # Incrémenter l'ID pour chaque nouvelle image
                 max_id += 1
                 new_filename = f"LI{max_id}.png"
                 file_path = os.path.join(app.config['UPLOAD_FOLDER'], new_filename)
 
-                # Ouvrir l'image directement depuis le fichier uploadé
-                file.stream.seek(0)  # Reset the file stream position to the beginning
+                file.stream.seek(0) 
                 img = Image.open(file.stream)
                 
                 if img.width != list_width or img.height != list_height:
                     #le cas où ça marche pas
                     return redirect(url_for('see_list', liste_id=liste_id))
 
-                # Enregistrer l'image si les dimensions sont correctes
                 img.save(file_path)
 
                 cursor.execute('INSERT INTO little_image (image_link, liste_id) VALUES (?, ?)', (new_filename, liste_id))
@@ -268,82 +278,102 @@ def upload_images(liste_id):
 
 
 
+# LA GIGA FONCTION
 
+@app.route('/generate_mosaic', methods=['POST'])
+def generate_mosaic():
+    if 'authentifie' in session and session['authentifie']:
+        user_id = session.get('user_id')
+        liste_id = request.form['liste']
+        ratio = request.form['ratio']
+        height = int(request.form['height'])
 
+        try:
+            width = int(height * (eval(ratio)))
+        except:
+            return "Le ratio est invalide. Utilisez un format comme '16/9'.", 400
+
+        conn = sqlite3.connect('database/database.db')
+        cursor = conn.cursor()
+
+        cursor.execute('SELECT largeur, hauteur FROM liste WHERE id = ? AND user_id = ?', (liste_id, user_id))
+        list_dimensions = cursor.fetchone()
+
+        if list_dimensions:
+            list_width, list_height = list_dimensions
+
+            num_images_x = width // list_width #images par ligne
+            num_images_y = height // list_height#images par colonne
+
+            ecart_horizontal = (width%list_width)//(num_images_x+2)
+            ecart_vertical = (height%list_height)//(num_images_y+2)
+
+            mosaic = Image.new('RGB', (width, height))
+            cursor.execute('SELECT image_link FROM little_image WHERE liste_id = ?', (liste_id,))
+            images = cursor.fetchall()
+
+            if not images:
+                conn.close()
+                return "Aucune image trouvée dans la liste sélectionnée.", 400
+
+            image_count = 0
+            for y in range(num_images_y):
+                for x in range(num_images_x):
+                    if image_count < len(images):
+                        img_path = os.path.join(app.config['UPLOAD_FOLDER'], images[image_count][0])
+                        with Image.open(img_path) as img:
+                            mosaic.paste(img, (x * list_width + (x+1)*ecart_horizontal, y * list_height + (y+1)*ecart_vertical))
+                        image_count += 1
+
+            mosaic_filename = "Mosaïque" + str(datetime.now().year)  + "-" + str(datetime.now().month) + "-" + str(datetime.now().day) + "-" + str(datetime.now().hour) + "-" + str(datetime.now().minute) + "-" + str(datetime.now().second)+".png"       
+            mosaic_path = os.path.join(app.config['UPLOAD_FOLDER'], mosaic_filename)
+
+            mosaic.save(mosaic_path)
+
+            cursor.execute('INSERT INTO image (nom, ratio, largeur, hauteur, image_link, user_id) VALUES (?, ?, ?, ?, ?, ?)',
+                           (mosaic_filename, ratio, width, height, mosaic_filename, user_id))
+            conn.commit()
+
+            conn.close()
+
+            return redirect(f"/static/images/{mosaic_filename}")
+        else:
+            conn.close()
+            return "Liste non trouvée ou vous n'avez pas la permission d'accéder à cette liste.", 400
+    else:
+        return redirect('/')
+    
 
 def verify_credentials(username, password):
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect('database/database.db')
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM user WHERE login = ? AND password = ?', (username, password,))
     user = cursor.fetchone()
     conn.close()
     return user
 
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+
+
+
 # -----------------------------------------------------------------------
 # -----------------------------------------------------------------------
 # -----------------------------------------------------------------------
 # -----------------------------------------------------------------------
 # -----------------------------------------------------------------------
-
-
-
-
-
-
-
-
-
-
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     return f'Image téléchargée: <img src="{url_for("static", filename="images/" + filename)}" />'
-
-
-
-################################################
-
-#empecher deux users d'avoir le même username
-
-
 # -------------------------------------------------------
-# ----------------------- Lecture -----------------------
 # -------------------------------------------------------
 
 
-@app.route('/fiche_perso/<int:post_id>')
-def Readfiche(post_id):
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM image WHERE id = ?', (post_id,))
-    data = cursor.fetchall()
-    conn.close()
-    # Rendre le template HTML et transmettre les données
-    return render_template('read_data.html', data=data)
 
 
-
-@app.route('/max_id')
-def recherche_id_max():
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT id FROM image ORDER BY id DESC LIMIT 1;')
-    data = cursor.fetchall()
-    conn.close()
-    return data
-
-@app.route('/max_id_little')
-def recherche_id_max_little():
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT id FROM little_image ORDER BY id DESC LIMIT 1;')
-    data = cursor.fetchall()
-    conn.close()
-    return data
-
-@app.route('/private')
-def hello_world():
-    return render_template('hello.html')
 
                                                                                                                                        
 if __name__ == "__main__":
