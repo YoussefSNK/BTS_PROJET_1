@@ -44,6 +44,12 @@ Architecture
 - Prochainement [/routes] pour stocker les fichiers qui s'occupent des routes
 
 
+Outils :
+- Versionning : Github
+- Vérification de code : Sonarqube
+- Convention de commit (au maximum)
+
+
 ## Lancement de l'Application
 python __init__.py
 python create_db.py
