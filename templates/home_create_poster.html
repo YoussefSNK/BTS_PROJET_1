@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/header.css') }}">
+    <title>Accueil</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+        }
+        
+        .container {
+            display: flex;
+            width: 80%;
+            margin: 20px auto;
+        }
+        
+        .left-panel, .right-panel {
+            padding: 20px;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .left-panel {
+            width: 40%;
+            margin-right: 20px;
+            overflow-y: auto;
+        }
+        
+        .left-panel h2 {
+            margin-top: 0;
+        }
+        
+        .left-panel ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        
+        .left-panel li {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .right-panel {
+            width: 60%;
+        }
+        
+        .right-panel h2 {
+            margin-top: 0;
+        }
+        
+    </style>
+</head>
+<body>
+    {% include 'header.html' %}
+    <div class="container">
+        <div class="left-panel">
+            <h2>Listes</h2>
+            <ul>
+                {% for row in data %}
+                <li><a href="/poster_creator/{{ row[3] }}">{{ row[0] }} ({{ row[1] }} x {{ row[2] }})<a></li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="right-panel">
+            <h2>Formulaire</h2>
+            <!-- Form content goes here -->
+        </div>
+    </div>
+</body>
+</html>
+src=

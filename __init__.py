@@ -163,6 +163,113 @@ def delete_poster(image_id):
 
 
 
+@app.route('/poster_creator')
+def list_and_create():
+    if 'authentifie' in session and session['authentifie']:
+        user_id = session.get('user_id')
+
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT nom, largeur, hauteur, id FROM liste WHERE user_id = ?', (user_id,))
+        data = cursor.fetchall()
+        conn.close()
+
+        return render_template('home_create_poster.html', data=data)
+    else:
+        return redirect('/')
+
+
+
+
+
+
+
+@app.route('/poster_creator/<int:liste_id>', methods=['GET'])
+def see_list(liste_id):
+    if 'authentifie' in session and session['authentifie']:
+        user_id = session.get('user_id')
+
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT image_link, id FROM little_image WHERE liste_id = ?', (liste_id,))
+        data = cursor.fetchall()
+        conn.close()
+        return render_template('list_page.html', data=data, liste_id=liste_id)
+    else:
+        return redirect('/')
+
+
+
+
+
+
+@app.route('/delete_image/<int:image_id>', methods=['POST'])
+def delete_image(image_id):
+    if 'authentifie' in session and session['authentifie']:
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM little_image WHERE id = ?', (image_id,))
+        conn.commit()
+        conn.close()
+        return redirect(request.referrer)
+    else:
+        return redirect('/')
+
+
+
+
+
+@app.route('/upload_images/<int:liste_id>', methods=['POST'])
+def upload_images(liste_id):
+    if 'authentifie' in session and session['authentifie']:
+        user_id = session.get('user_id')
+
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT largeur, hauteur FROM liste WHERE id = ?', (liste_id,))
+        dimensions = cursor.fetchone()
+        list_width, list_height = dimensions if dimensions else (None, None)
+
+        if not list_width or not list_height:
+            return "Dimensions de la liste introuvables.", 400
+
+        # Obtenir l'ID maximum actuel de la table little_image
+        cursor.execute('SELECT id FROM little_image ORDER BY id DESC LIMIT 1;')
+        max_id_data = cursor.fetchone()
+        max_id = max_id_data[0] if max_id_data else 0
+
+        files = request.files.getlist('files')
+        for file in files:
+            if file and allowed_file(file.filename):
+                # Incrémenter l'ID pour chaque nouvelle image
+                max_id += 1
+                new_filename = f"LI{max_id}.png"
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], new_filename)
+
+                # Ouvrir l'image directement depuis le fichier uploadé
+                file.stream.seek(0)  # Reset the file stream position to the beginning
+                img = Image.open(file.stream)
+                
+                if img.width != list_width or img.height != list_height:
+                    #le cas où ça marche pas
+                    return redirect(url_for('see_list', liste_id=liste_id))
+
+                # Enregistrer l'image si les dimensions sont correctes
+                img.save(file_path)
+
+                cursor.execute('INSERT INTO little_image (image_link, liste_id) VALUES (?, ?)', (new_filename, liste_id))
+        
+        conn.commit()
+        conn.close()
+        
+        return redirect(url_for('see_list', liste_id=liste_id))
+    else:
+        return redirect('/')
+
+
+
+
+
 
 def verify_credentials(username, password):
     conn = sqlite3.connect('database.db')
@@ -208,7 +315,7 @@ def uploaded_file(filename):
 def Readfiche(post_id):
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM perso WHERE id = ?', (post_id,))
+    cursor.execute('SELECT * FROM image WHERE id = ?', (post_id,))
     data = cursor.fetchall()
     conn.close()
     # Rendre le template HTML et transmettre les données
@@ -220,11 +327,19 @@ def Readfiche(post_id):
 def recherche_id_max():
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT id FROM perso ORDER BY id DESC LIMIT 1;')
+    cursor.execute('SELECT id FROM image ORDER BY id DESC LIMIT 1;')
     data = cursor.fetchall()
     conn.close()
     return data
 
+@app.route('/max_id_little')
+def recherche_id_max_little():
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT id FROM little_image ORDER BY id DESC LIMIT 1;')
+    data = cursor.fetchall()
+    conn.close()
+    return data
 
 @app.route('/private')
 def hello_world():

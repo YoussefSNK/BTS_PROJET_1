@@ -51,7 +51,7 @@
                 <td>{{ row[1] }}</td>
                 <td>{{ row[2] }}</td>
                 <td>{{ row[3] }}</td>
-                <td><img src="{{ url_for('static', filename='images/' + row[4]) }}" class="image" /></td>
+                <td><img src="{{ url_for('static', filename='images/' + row[4]) }}" class="image"/></td>
                 <td>
                     <form class="delete-form" action="/delete_poster/{{ row[5] }}" method="post" onsubmit="return confirm('Voulez-vous vraiment supprimer cette image ?');">
                         <input type="hidden" name="_method" value="DELETE">
