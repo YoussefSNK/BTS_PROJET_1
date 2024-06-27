@@ -25,3 +25,11 @@ CREATE TABLE liste (
     hauteur INTEGER NOT NULL,
     user_id INTEGER NOT NULL
 );
+
+DROP TABLE IF EXISTS little_image;
+CREATE TABLE little_image (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    image_link TEXT NOT NULL,
+    liste_id INTEGER NOT NULL
+
+);
