@@ -20,6 +20,8 @@ cur.execute("INSERT INTO image (nom, ratio, largeur, hauteur, image_link, user_i
 cur.execute("INSERT INTO image (nom, ratio, largeur, hauteur, image_link, user_id) VALUES (?, ?, ?, ?, ?, ?)",('Paco Lovelantes', 1.0, 2, 2, 'Paco Lovelantes.png', 3))
 cur.execute("INSERT INTO image (nom, ratio, largeur, hauteur, image_link, user_id) VALUES (?, ?, ?, ?, ?, ?)",('Inkling Boy', 1.0, 2, 2, 'Inkling Boy.png', 3))
 
+cur.execute("INSERT INTO liste (nom, largeur, hauteur, user_id) VALUES (?, ?, ?, ?)",('Pokémon', 204, 204, 2))
+
 
 connection.commit()
 connection.close()

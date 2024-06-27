@@ -16,3 +16,12 @@ CREATE TABLE user (
     login TEXT NOT NULL,
     password TEXT NOT NULL
 );
+
+DROP TABLE IF EXISTS liste;
+CREATE TABLE liste (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nom TEXT NOT NULL,
+    largeur INTEGER NOT NULL,
+    hauteur INTEGER NOT NULL,
+    user_id INTEGER NOT NULL
+);
