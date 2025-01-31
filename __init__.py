@@ -93,6 +93,48 @@ def ReadBDD():
     else:
         return redirect('/')
 
+@app.route('/user_beads', methods=['GET', 'POST'])
+def user_beads():
+    if 'authentifie' in session and session['authentifie']:
+        user_id = session.get('user_id')
+
+        conn = sqlite3.connect('database/database.db')
+        cursor = conn.cursor()
+
+        # Récupérer les couleurs disponibles
+        cursor.execute('SELECT * FROM Colors')
+        colors = cursor.fetchall()
+
+        if request.method == 'POST':
+            # Mettre à jour les quantités pour chaque couleur
+            for color in colors:
+                color_id = color[0]
+                quantity = request.form.get(f'quantity_{color_id}')
+                if quantity is not None:
+                    quantity = int(quantity)
+                    cursor.execute('''
+                        INSERT INTO UserBeads (user_id, color_id, quantity)
+                        VALUES (?, ?, ?)
+                        ON CONFLICT(user_id, color_id)
+                        DO UPDATE SET quantity=excluded.quantity
+                    ''', (user_id, color_id, quantity))
+
+            conn.commit()
+
+        # Récupérer les quantités actuelles de l'utilisateur
+        cursor.execute('''
+            SELECT c.id, c.hex, c.name, c.code, ub.quantity
+            FROM Colors c
+            LEFT JOIN UserBeads ub ON c.id = ub.color_id AND ub.user_id = ?
+        ''', (user_id,))
+        user_beads = cursor.fetchall()
+
+        conn.close()
+        print(colors)
+        print("user_beads =", user_beads)
+        return render_template('user_beads.html', colors=user_beads)
+    else:
+        return redirect('/')
 
 
 

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>User Beads</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        .color-box {
+            width: 20px;
+            height: 20px;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <h1>Manage Your Beads</h1>
+
+    <form method="post" action="{{ url_for('user_beads') }}">
+        <table>
+            <thead>
+                <tr>
+                    <th>Color</th>
+                    <th>Hex Code</th>
+                    <th>Quantity</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for color in colors %}
+                    <tr>
+                        <td>
+                            <div class="color-box" style="background-color: {{ color[1] }};"></div>
+                            {{ color[3]+"/"+color[2] }}
+                        </td>
+                        <td>{{ color[1] }}</td>
+                        <td>
+                            <input type="number" name="quantity_{{ color[0] }}" value="{{ color[3] or 0 }}">
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <button type="submit">Update Quantities</button>
+    </form>
+</body>
+</html>
