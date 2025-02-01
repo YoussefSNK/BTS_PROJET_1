@@ -1,10 +1,11 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 from werkzeug.utils import secure_filename
 #from flask_uploads import UploadSet, configure_uploads, IMAGES
 from urllib.request import urlopen
 import sqlite3
 import os
 from PIL import Image
+from collections import Counter
 
 from datetime import datetime
 
@@ -151,6 +152,102 @@ def ModelList():
         return render_template('model_list.html', images=image_data, colors=colors, selected_colors=selected_colors)
     else:
         return redirect('/')
+
+
+
+
+
+
+
+
+def downscale_image(image, factor):
+    width, height = image.size
+    new_size = (width // factor, height // factor)
+    downscaled_image = image.resize(new_size, Image.NEAREST)
+    return downscaled_image
+
+def get_color_histogram(image):
+    colors = image.getdata()
+    color_counts = Counter(colors)
+    return color_counts
+
+def detect_colors(image_path):
+    img = Image.open(image_path).convert("RGB")
+    prev_histogram = None
+
+    for factor in range(2, min(img.size) // 2):
+        downscaled_image = downscale_image(img, factor)
+        current_histogram = get_color_histogram(downscaled_image)
+
+        if prev_histogram and current_histogram == prev_histogram:
+            break
+        
+        prev_histogram = current_histogram
+
+    hex_color_counts = {
+        "#{:02x}{:02x}{:02x}".format(r, g, b): count
+        for (r, g, b), count in current_histogram.items()
+    }
+
+    print("Detected colors:", hex_color_counts)  # Debugging output
+    return hex_color_counts
+
+@app.route('/add_image', methods=['GET', 'POST'])
+def add_image():
+    if 'authentifie' in session and session['authentifie']:
+        user_id = session.get('user_id')
+
+        conn = sqlite3.connect('database/database.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM Colors')
+        colors = cursor.fetchall()
+        conn.close()
+
+        if request.method == 'POST':
+            if 'image' not in request.files:
+                flash('No file part')
+                return redirect(request.url)
+            file = request.files['image']
+            if file.filename == '':
+                flash('No selected file')
+                return redirect(request.url)
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(file_path)
+
+                description = request.form.get('description')
+
+                # Ajouter l'image à la base de données
+                conn = sqlite3.connect('database/database.db')
+                cursor = conn.cursor()
+                cursor.execute('INSERT INTO Images (user_id, image_path, description) VALUES (?, ?, ?)', 
+                               (user_id, file_path, description))
+                image_id = cursor.lastrowid
+
+                # Détecter les couleurs dans l'image
+                detected_colors = detect_colors(file_path)
+                # Ajouter les couleurs associées à l'image
+                for color in colors:
+                    color_id = color[0]
+                    color_hex = color[3]
+                    quantity = detected_colors.get(color_hex, 0)
+                    print(f"Color ID: {color_id}, Color Hex: {color_hex}, Quantity: {quantity}")  # Debugging output
+                    if quantity > 0:
+                        cursor.execute('INSERT INTO ImageColors (image_id, color_id, quantity) VALUES (?, ?, ?)', 
+                                       (image_id, color_id, quantity))
+
+                conn.commit()
+                conn.close()
+
+                return redirect(url_for('ModelList'))
+
+        return render_template('add_model.html', colors=colors)
+    else:
+        return redirect('/')
+
+
+
 @app.route('/user_beads', methods=['GET', 'POST'])
 def user_beads():
     if 'authentifie' in session and session['authentifie']:

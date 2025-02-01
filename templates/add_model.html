@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Add Image</title>
+</head>
+<body>
+    <h1>Add a New Image</h1>
+    <form action="{{ url_for('add_image') }}" method="post" enctype="multipart/form-data">
+        <label for="image">Image:</label>
+        <input type="file" name="image" id="image" required>
+        <br><br>
+        <label for="description">Description:</label>
+        <textarea name="description" id="description" rows="4" cols="50"></textarea>
+        <br><br>
+        <h3>Colors:</h3>
+        <br>
+        <button type="submit">Add Image</button>
+    </form>
+</body>
+</html>
