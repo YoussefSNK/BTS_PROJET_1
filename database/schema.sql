@@ -33,3 +33,41 @@ CREATE TABLE little_image (
     liste_id INTEGER NOT NULL
 
 );
+
+DROP TABLE IF EXISTS Colors;
+CREATE TABLE Colors (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL,
+    hex TEXT NOT NULL
+);
+
+
+DROP TABLE IF EXISTS UserBeads;
+CREATE TABLE UserBeads (
+    user_id INTEGER NOT NULL,
+    color_id INTEGER NOT NULL,
+    quantity INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES user (id),
+    FOREIGN KEY (color_id) REFERENCES Colors (id),
+    PRIMARY KEY (user_id, color_id)
+);
+
+DROP TABLE IF EXISTS Images;
+CREATE TABLE Images (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    image_path TEXT NOT NULL,
+    description TEXT,
+    FOREIGN KEY (user_id) REFERENCES user (id)
+);
+
+DROP TABLE IF EXISTS ImageColors;
+CREATE TABLE ImageColors (
+    image_id INTEGER NOT NULL,
+    color_id INTEGER NOT NULL,
+    quantity INTEGER NOT NULL,
+    FOREIGN KEY (image_id) REFERENCES Images (id),
+    FOREIGN KEY (color_id) REFERENCES Colors (id),
+    PRIMARY KEY (image_id, color_id)
+);
