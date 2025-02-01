@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Image Availability</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        img {
+            width: 100px;
+            height: auto;
+        }
+        .insufficient {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>Image Availability</h1>
+
+    <h2>Images You Can Complete</h2>
+    {% for image in image_data %}
+        {% if image[3] %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Image</th>
+                        <th>Description</th>
+                        <th>Color</th>
+                        <th>Required Quantity</th>
+                        <th>Your Quantity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td rowspan="{{ image[2]|length + 1 }}"><img src="{{ image[0] }}" alt="Image"></td>
+                        <td rowspan="{{ image[2]|length + 1 }}">{{ image[1] }}</td>
+                    </tr>
+                    {% for color in image[2] %}
+                        <tr>
+                            <td style="background-color: {{ color[0] }};">{{ color[1] }}</td>
+                            <td>{{ color[2] }}</td>
+                            <td>{{ color[3] }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    {% endfor %}
+
+    <h2>Images You Cannot Complete</h2>
+    {% for image in image_data %}
+        {% if not image[3] %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Image</th>
+                        <th>Description</th>
+                        <th>Color</th>
+                        <th>Required Quantity</th>
+                        <th>Your Quantity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td rowspan="{{ image[2]|length + 1 }}"><img src="{{ image[0] }}" alt="Image"></td>
+                        <td rowspan="{{ image[2]|length + 1 }}">{{ image[1] }}</td>
+                    </tr>
+                    {% for color in image[2] %}
+                        <tr>
+                            <td style="background-color: {{ color[0] }};">{{ color[1] }}</td>
+                            <td>{{ color[2] }}</td>
+                            <td class="{% if color[3] < color[2] %}insufficient{% endif %}">{{ color[3] }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    {% endfor %}
+</body>
+</html>

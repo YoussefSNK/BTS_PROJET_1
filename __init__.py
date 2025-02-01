@@ -292,6 +292,69 @@ def user_beads():
         return redirect('/')
 
 
+@app.route('/image_availability', methods=['GET'])
+def image_availability():
+    if 'authentifie' in session and session['authentifie']:
+        user_id = session.get('user_id')
+
+        conn = sqlite3.connect('database/database.db')
+        cursor = conn.cursor()
+
+        # Récupérer les images de l'utilisateur
+        cursor.execute('''
+            SELECT i.id, i.image_path, i.description
+            FROM Images i
+            WHERE i.user_id = ?
+        ''', (user_id,))
+        images = cursor.fetchall()
+
+        image_data = []
+
+        for image in images:
+            image_id = image[0]
+            image_path = image[1]
+            description = image[2]
+            
+            # Récupérer les couleurs et quantités nécessaires pour l'image
+            cursor.execute('''
+                SELECT c.id, c.hex, c.name, ic.quantity
+                FROM ImageColors ic
+                JOIN Colors c ON ic.color_id = c.id
+                WHERE ic.image_id = ?
+            ''', (image_id,))
+            image_colors = cursor.fetchall()
+
+            # Récupérer les quantités actuelles de l'utilisateur pour ces couleurs
+            user_colors = {}
+            cursor.execute('''
+                SELECT color_id, quantity
+                FROM UserBeads
+                WHERE user_id = ?
+            ''', (user_id,))
+            for row in cursor.fetchall():
+                user_colors[row[0]] = row[1]
+
+            # Vérifier si l'utilisateur a assez de perles pour chaque couleur
+            sufficient = True
+            colors_status = []
+            for color in image_colors:
+                color_id = color[0]
+                hex_code = color[1]
+                color_name = color[2]
+                required_quantity = color[3]
+                user_quantity = user_colors.get(color_id, 0)
+                if user_quantity < required_quantity:
+                    sufficient = False
+                colors_status.append((hex_code, color_name, required_quantity, user_quantity))
+
+            image_data.append((image_path, description, colors_status, sufficient))
+
+        conn.close()
+
+        return render_template('image_availability.html', image_data=image_data)
+    else:
+        return redirect('/')
+
 
 
 
