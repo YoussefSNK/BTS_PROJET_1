@@ -3,31 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/header.css') }}">
     <title>Accueil</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/header.css') }}">
 </head>
-<body>
+<body class="bg-gray-100 text-gray-800">
+    
     {% include 'header.html' %}
 
-    <a href="/poster_list">
-        <button>Voir vos posters</button>
-    </a>
-    <a href="/poster_creator">
-        <button>Création de poster</button>
-    </a>
-    <a href="/model_list">
-        <button>Voir vos modèles</button>
-    </a>
-    <a href="/user_beads">
-        <button>Vos couleurs</button>
-    </a>
-    <a href="/image_availability">
-        <button>Vos modèles disponibles</button>
-    </a>
-    <a href="/add_image">
-        <button>Ajouter une image</button>
-    </a>
+    <div class="max-w-2xl mx-auto mt-10 p-6 bg-white shadow-lg rounded-lg text-center">
+        <h1 class="text-2xl font-semibold mb-6">Bienvenue</h1>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <a href="/poster_list" class="btn">Voir vos posters</a>
+            <a href="/poster_creator" class="btn">Création de poster</a>
+            <a href="/model_list" class="btn">Voir vos modèles</a>
+            <a href="/user_beads" class="btn">Vos couleurs</a>
+            <a href="/image_availability" class="btn">Vos modèles disponibles</a>
+            <a href="/add_image" class="btn">Ajouter une image</a>
+        </div>
+    </div>
 
+    <style>
+        .btn {
+            @apply bg-blue-600 text-white py-3 px-5 rounded-md shadow-md text-lg font-medium hover:bg-blue-700 transition;
+            display: block;
+            text-align: center;
+        }
+    </style>
 
 </body>
 </html>

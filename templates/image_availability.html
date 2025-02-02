@@ -2,90 +2,91 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Image Availability</title>
-    <style>
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-        }
-        table, th, td {
-            border: 1px solid black;
-        }
-        th, td {
-            padding: 10px;
-            text-align: left;
-        }
-        img {
-            width: 100px;
-            height: auto;
-        }
-        .insufficient {
-            color: red;
-        }
-    </style>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <h1>Image Availability</h1>
+<body class="bg-gray-100 text-gray-800">
+    <div class="max-w-4xl mx-auto mt-10 p-6 bg-white shadow-lg rounded-lg">
+        <h1 class="text-2xl font-semibold text-center mb-6">Image Availability</h1>
 
-    <h2>Images You Can Complete</h2>
-    {% for image in image_data %}
-        {% if image[3] %}
-            <table>
-                <thead>
-                    <tr>
-                        <th>Image</th>
-                        <th>Description</th>
-                        <th>Color</th>
-                        <th>Required Quantity</th>
-                        <th>Your Quantity</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td rowspan="{{ image[2]|length + 1 }}"><img src="{{ image[0] }}" alt="Image"></td>
-                        <td rowspan="{{ image[2]|length + 1 }}">{{ image[1] }}</td>
-                    </tr>
-                    {% for color in image[2] %}
-                        <tr>
-                            <td style="background-color: {{ color[0] }};">{{ color[1] }}</td>
-                            <td>{{ color[2] }}</td>
-                            <td>{{ color[3] }}</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        {% endif %}
-    {% endfor %}
+        <!-- Images complétables -->
+        <h2 class="text-xl font-semibold text-green-600 mb-4">Images You Can Complete ✅</h2>
+        <div class="space-y-6">
+            {% for image in image_data %}
+                {% if image[3] %}
+                    <div class="bg-gray-50 p-4 rounded-lg shadow">
+                        <div class="flex items-center space-x-4">
+                            <img src="{{ image[0] }}" alt="Image" class="w-24 h-auto rounded-md shadow">
+                            <div>
+                                <p class="text-lg font-medium">{{ image[1] }}</p>
+                            </div>
+                        </div>
+                        <table class="w-full mt-4 border border-gray-300 rounded-lg">
+                            <thead class="bg-gray-200">
+                                <tr>
+                                    <th class="py-2 px-4 text-left">Color</th>
+                                    <th class="py-2 px-4 text-left">Required</th>
+                                    <th class="py-2 px-4 text-left">Available</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for color in image[2] %}
+                                    <tr class="border-t border-gray-300">
+                                        <td class="py-2 px-4 flex items-center space-x-2">
+                                            <span class="w-6 h-6 rounded-full border border-gray-300" style="background-color: {{ color[0] }};"></span>
+                                            <span>{{ color[1] }}</span>
+                                        </td>
+                                        <td class="py-2 px-4">{{ color[2] }}</td>
+                                        <td class="py-2 px-4 text-green-600 font-medium">{{ color[3] }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
 
-    <h2>Images You Cannot Complete</h2>
-    {% for image in image_data %}
-        {% if not image[3] %}
-            <table>
-                <thead>
-                    <tr>
-                        <th>Image</th>
-                        <th>Description</th>
-                        <th>Color</th>
-                        <th>Required Quantity</th>
-                        <th>Your Quantity</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td rowspan="{{ image[2]|length + 1 }}"><img src="{{ image[0] }}" alt="Image"></td>
-                        <td rowspan="{{ image[2]|length + 1 }}">{{ image[1] }}</td>
-                    </tr>
-                    {% for color in image[2] %}
-                        <tr>
-                            <td style="background-color: {{ color[0] }};">{{ color[1] }}</td>
-                            <td>{{ color[2] }}</td>
-                            <td class="{% if color[3] < color[2] %}insufficient{% endif %}">{{ color[3] }}</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        {% endif %}
-    {% endfor %}
+        <!-- Images non complétables -->
+        <h2 class="text-xl font-semibold text-red-600 mt-10 mb-4">Images You Cannot Complete ❌</h2>
+        <div class="space-y-6">
+            {% for image in image_data %}
+                {% if not image[3] %}
+                    <div class="bg-gray-50 p-4 rounded-lg shadow">
+                        <div class="flex items-center space-x-4">
+                            <img src="{{ image[0] }}" alt="Image" class="w-24 h-auto rounded-md shadow">
+                            <div>
+                                <p class="text-lg font-medium">{{ image[1] }}</p>
+                            </div>
+                        </div>
+                        <table class="w-full mt-4 border border-gray-300 rounded-lg">
+                            <thead class="bg-gray-200">
+                                <tr>
+                                    <th class="py-2 px-4 text-left">Color</th>
+                                    <th class="py-2 px-4 text-left">Required</th>
+                                    <th class="py-2 px-4 text-left">Available</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for color in image[2] %}
+                                    <tr class="border-t border-gray-300">
+                                        <td class="py-2 px-4 flex items-center space-x-2">
+                                            <span class="w-6 h-6 rounded-full border border-gray-300" style="background-color: {{ color[0] }};"></span>
+                                            <span>{{ color[1] }}</span>
+                                        </td>
+                                        <td class="py-2 px-4">{{ color[2] }}</td>
+                                        <td class="py-2 px-4 font-medium {% if color[3] < color[2] %} text-red-600 {% else %} text-green-600 {% endif %}">
+                                            {{ color[3] }}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
 </body>
 </html>
