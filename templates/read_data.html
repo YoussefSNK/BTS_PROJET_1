@@ -2,66 +2,66 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/header.css') }}">
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/stylo.css') }}">
-    <title>Perso</title>
-    <style>
-        th.sortable:hover {
-            cursor: pointer;
-            text-decoration: underline;
-        }
-        .delete-icon {
-            cursor: pointer;
-            color: red;
-            font-weight: bold;
-        }
-        .delete-form {
-            display: inline;
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personnages</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    {% include 'header.html' %}
-    <h1>Liste des Personnages</h1>
-    <a href="/upload_poster"><button>Ajouter une image</button></a>
+<body class="bg-gray-100 text-gray-800">
+    <div class="max-w-5xl mx-auto mt-10 p-6 bg-white shadow-lg rounded-lg">
+        <h1 class="text-2xl font-semibold text-center mb-6">Liste des Personnages</h1>
 
-    <div>
-        <label for="ratio-input">Chercher par ratio : </label>
-        <input type="number" id="ratio-input" step="0.01">
-        <button onclick="filterByRatio()">Rechercher</button>
+        <!-- Bouton Ajouter une image -->
+        <div class="text-center mb-6">
+            <a href="/upload_poster" class="bg-blue-600 text-white px-4 py-2 rounded-md shadow-md font-medium hover:bg-blue-700 transition">
+                Ajouter une image
+            </a>
+        </div>
+
+        <!-- Filtrage par ratio -->
+        <div class="flex justify-center items-center space-x-2 mb-6">
+            <label for="ratio-input" class="font-medium">Chercher par ratio :</label>
+            <input type="number" id="ratio-input" step="0.01" class="border p-2 rounded-md shadow-sm">
+            <button onclick="filterByRatio()" class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition">
+                Rechercher
+            </button>
+        </div>
+
+        <!-- Tableau des personnages -->
+        <div class="overflow-x-auto">
+            <table class="w-full border-collapse bg-white shadow-md rounded-lg">
+                <thead>
+                    <tr class="bg-gray-200">
+                        <th class="py-3 px-4 text-left cursor-pointer hover:underline" onclick="sortTable(0)">Nom</th>
+                        <th class="py-3 px-4 text-left cursor-pointer hover:underline" onclick="sortTable(1)">Ratio</th>
+                        <th class="py-3 px-4 text-left cursor-pointer hover:underline" onclick="sortTable(2)">Largeur</th>
+                        <th class="py-3 px-4 text-left cursor-pointer hover:underline" onclick="sortTable(3)">Hauteur</th>
+                        <th class="py-3 px-4 text-left">Image</th>
+                        <th class="py-3 px-4 text-left">Supprimer</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in data %}
+                    <tr class="border-t">
+                        <td class="py-3 px-4">{{ row[0] }}</td>
+                        <td class="py-3 px-4">{{ row[1] }}</td>
+                        <td class="py-3 px-4">{{ row[2] }}</td>
+                        <td class="py-3 px-4">{{ row[3] }}</td>
+                        <td class="py-3 px-4">
+                            <img src="{{ url_for('static', filename='images/' + row[4]) }}" class="w-16 h-auto rounded-md shadow">
+                        </td>
+                        <td class="py-3 px-4">
+                            <form class="inline" action="/delete_poster/{{ row[5] }}" method="post" onsubmit="return confirm('Voulez-vous vraiment supprimer cette image ?');">
+                                <input type="hidden" name="_method" value="DELETE">
+                                <button type="submit" class="text-red-600 hover:text-red-800 transition text-lg font-bold">
+                                    &times;
+                                </button>
+                            </form>
+                        </td>            
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
-
-
-
-    <table id="poster-table">
-        <thead>
-            <tr>
-                <th class="sortable" onclick="sortTable(0)">Nom</th>
-                <th class="sortable" onclick="sortTable(1)">Ratio</th>
-                <th class="sortable" onclick="sortTable(2)">Largeur</th>
-                <th class="sortable" onclick="sortTable(3)">Hauteur</th>
-                <th>Lien d'image</th>
-                <th>Supprimer</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for row in data %}
-            <tr>
-                <td>{{ row[0] }}</td>
-                <td>{{ row[1] }}</td>
-                <td>{{ row[2] }}</td>
-                <td>{{ row[3] }}</td>
-                <td><img src="{{ url_for('static', filename='images/' + row[4]) }}" class="image"/></td>
-                <td>
-                    <form class="delete-form" action="/delete_poster/{{ row[5] }}" method="post" onsubmit="return confirm('Voulez-vous vraiment supprimer cette image ?');">
-                        <input type="hidden" name="_method" value="DELETE">
-                        <button type="submit" class="delete-icon">&times;</button>
-                    </form>
-                </td>            
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-
 </body>
 </html>
