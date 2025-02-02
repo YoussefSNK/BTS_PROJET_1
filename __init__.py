@@ -9,6 +9,8 @@ from collections import Counter
 
 from datetime import datetime
 
+from routes.posters import poster_bp
+
 app = Flask(__name__)                                                                                                                  
 app.secret_key = b'_5#y2L"F4Q8z\n\xec]/'  # Clé secrète pour les sessions
 
@@ -24,6 +26,10 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+
+app.register_blueprint(poster_bp)
 
 
 
@@ -54,7 +60,7 @@ def enregistrer_client():
     if user:
         session['authentifie'] = True
         session['user_id'] = user[0] 
-        return redirect(url_for('ReadBDD'))
+        return redirect(url_for('poster_list'))
     
     return redirect('/')
 
@@ -79,20 +85,6 @@ def deconnexion_utilisateur():
     return redirect('/')
 
 
-@app.route('/poster_list')
-def ReadBDD():
-    if 'authentifie' in session and session['authentifie']:
-        user_id = session.get('user_id')
-
-        conn = sqlite3.connect('database/database.db')
-        cursor = conn.cursor()
-        cursor.execute('SELECT nom, ratio, largeur, hauteur, image_link, id FROM image WHERE user_id = ?', (user_id,))
-        data = cursor.fetchall()
-        conn.close()
-
-        return render_template('read_data.html', data=data)
-    else:
-        return redirect('/')
 
 @app.route('/model_list', methods=['GET', 'POST'])
 def ModelList():
@@ -247,7 +239,6 @@ def add_image():
         return redirect('/')
 
 
-
 @app.route('/user_beads', methods=['GET', 'POST'])
 def user_beads():
     if 'authentifie' in session and session['authentifie']:
@@ -354,69 +345,6 @@ def image_availability():
         return render_template('image_availability.html', image_data=image_data)
     else:
         return redirect('/')
-
-
-
-
-@app.route('/upload_poster', methods=['GET'])
-def formulaire_perso():
-    return render_template('new_poster_form.html')
-
-@app.route('/upload_poster', methods=['POST'])
-def upload_poster():
-    nom = request.form['nom']
-    file = request.files['file']
-
-    conn = sqlite3.connect('database/database.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT id FROM image ORDER BY id DESC LIMIT 1;')
-    data = cursor.fetchone()
-    max_id = data[0] if data else 0
-
-    if file and allowed_file(file.filename):
-        extension = file.filename[-4:]
-        filename = secure_filename(f"{max_id + 1}{extension}")
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-
-        with Image.open(os.path.join(app.config['UPLOAD_FOLDER'], filename)) as img:
-            largeur, hauteur = img.size
-        ratio = largeur/hauteur
-
-        cursor.execute('''
-                INSERT INTO image (nom, ratio, largeur, hauteur, image_link, user_id)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (nom, ratio, largeur, hauteur, filename, session.get('user_id')))
-        conn.commit()
-    conn.close()
-    return redirect('/poster_list')
-
-
-@app.route('/delete_poster/<int:image_id>', methods=['POST'])
-def delete_poster(image_id):
-    if request.form.get('_method') == 'DELETE':
-        if 'authentifie' in session and session['authentifie']:
-            user_id = session.get('user_id')
-
-            conn = sqlite3.connect('database/database.db')
-            cursor = conn.cursor()
-            cursor.execute('SELECT image_link FROM image WHERE id = ? AND user_id = ?', (image_id, user_id))
-            data = cursor.fetchone()
-
-            if data:
-                image_path = os.path.join(app.config['UPLOAD_FOLDER'], data[0])
-                if os.path.exists(image_path):
-                    os.remove(image_path)
-
-                cursor.execute('DELETE FROM image WHERE id = ? AND user_id = ?', (image_id, user_id))
-                conn.commit()
-
-            conn.close()
-            return redirect('/poster_list')
-        else:
-            return redirect('/')
-    return 'Method Not Allowed', 405
-
-
 
 
 
@@ -611,13 +539,6 @@ def verify_credentials(username, password):
     user = cursor.fetchone()
     conn.close()
     return user
-
-
-if __name__ == '__main__':
-    app.run(debug=True)
-
-
-
 
 # -----------------------------------------------------------------------
 # -----------------------------------------------------------------------
