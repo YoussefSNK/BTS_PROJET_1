@@ -7,28 +7,44 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/header.css') }}">
 </head>
-<body class="bg-gray-100 text-gray-800">
-    
+<body class="bg-gradient-to-br from-gray-100 to-gray-300 text-gray-800 min-h-screen flex flex-col">
+
     {% include 'header.html' %}
 
-    <div class="max-w-2xl mx-auto mt-10 p-6 bg-white shadow-lg rounded-lg text-center">
-        <h1 class="text-2xl font-semibold mb-6">Bienvenue</h1>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <a href="/poster_list" class="btn">Voir vos posters</a>
-            <a href="/poster_creator" class="btn">Création de poster</a>
-            <a href="/model_list" class="btn">Voir vos modèles</a>
-            <a href="/user_beads" class="btn">Vos couleurs</a>
-            <a href="/image_availability" class="btn">Vos modèles disponibles</a>
-            <a href="/add_image" class="btn">Ajouter une image</a>
+    <div class="flex flex-col items-center justify-center flex-1 px-4">
+        <div class="max-w-3xl w-full bg-white shadow-xl rounded-2xl p-8 text-center">
+            <h1 class="text-3xl font-bold text-gray-900 mb-6">Bienvenue</h1>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <a href="/poster_list" class="btn">
+                    <span class="icon">🖼️</span> Voir vos posters
+                </a>
+                <a href="/poster_creator" class="btn">
+                    <span class="icon">🎨</span> Création de poster
+                </a>
+                <a href="/model_list" class="btn">
+                    <span class="icon">📂</span> Voir vos modèles
+                </a>
+                <a href="/user_beads" class="btn">
+                    <span class="icon">🎨</span> Vos couleurs
+                </a>
+                <a href="/image_availability" class="btn">
+                    <span class="icon">🖼️</span> Vos modèles disponibles
+                </a>
+                <a href="/add_image" class="btn">
+                    <span class="icon">➕</span> Ajouter une image
+                </a>
+            </div>
         </div>
     </div>
 
     <style>
         .btn {
-            @apply bg-blue-600 text-white py-3 px-5 rounded-md shadow-md text-lg font-medium hover:bg-blue-700 transition;
-            display: block;
-            text-align: center;
+            @apply flex items-center justify-center bg-blue-600 text-white py-3 px-6 rounded-lg shadow-lg text-lg font-medium hover:bg-blue-700 transition duration-300;
+            gap: 10px;
+        }
+        .icon {
+            font-size: 1.5rem;
         }
     </style>
 
