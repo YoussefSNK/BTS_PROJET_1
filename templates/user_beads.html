@@ -1,47 +1,41 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Beads</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gérez vos perles</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 text-gray-800">
-    <div class="max-w-3xl mx-auto mt-10 p-6 bg-white shadow-lg rounded-lg">
-        <h1 class="text-2xl font-semibold text-center mb-6">Manage Your Beads</h1>
-
-        <form method="post" action="{{ url_for('user_beads') }}">
-            <table class="w-full border-collapse bg-gray-50 shadow-md rounded-lg overflow-hidden">
-                <thead class="bg-gray-200 text-gray-700">
-                    <tr>
-                        <th class="py-3 px-4 text-left">Color</th>
-                        <th class="py-3 px-4 text-left">Hex Code</th>
-                        <th class="py-3 px-4 text-left">Quantity</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for color in colors %}
-                        <tr class="border-b border-gray-300">
-                            <td class="py-3 px-4 flex items-center space-x-3">
-                                <span class="w-6 h-6 rounded-full border border-gray-300" style="background-color: {{ color[1] }};"></span>
-                                <span class="text-sm font-medium">{{ color[3] }}/{{ color[2] }}</span>
-                            </td>
-                            <td class="py-3 px-4 font-mono text-sm text-gray-600">{{ color[1] }}</td>
-                            <td class="py-3 px-4">
-                                <input type="number" name="quantity_{{ color[0] }}" value="{{ color[3] or 0 }}" 
-                                    class="w-20 px-2 py-1 border border-gray-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-blue-400">
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-
-            <div class="mt-6 text-center">
-                <button type="submit" class="bg-blue-600 text-white px-5 py-2 rounded-md shadow hover:bg-blue-700 transition">
-                    Update Quantities
-                </button>
+  <div class="max-w-7xl mx-auto p-6">
+    <h1 class="text-3xl font-bold text-center mb-8">Gérez vos perles</h1>
+    
+    <!-- Grille responsive : 1 colonne sur mobile, 2 sur sm, 3 sur md, 4 sur lg -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      {% for color in colors %}
+        <div class="bg-white shadow-lg rounded-lg p-4 flex flex-col items-center">
+          <!-- Aperçu de la couleur -->
+          <div class="w-16 h-16 rounded-full border border-gray-300" style="background-color: {{ color[1] }};"></div>
+          <div class="mt-3 text-center">
+            <p class="font-medium">{{ color[3] }} / {{ color[2] }}</p>
+            <p class="text-sm text-gray-600">{{ color[1] }}</p>
+          </div>
+          
+          <!-- Formulaire dédié à cette couleur -->
+          <form method="post" action="{{ url_for('user_beads') }}" class="mt-4 w-full">
+            <!-- Champ caché pour transmettre l'identifiant de la couleur -->
+            <input type="hidden" name="color_id" value="{{ color[0] }}">
+            <div class="flex items-center justify-center space-x-2">
+              <input type="number" name="quantity" value="{{ color[4] or 0 }}"
+                     class="w-20 px-2 py-1 border border-gray-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-blue-400">
+              <button type="submit" class="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 transition">
+                Update
+              </button>
             </div>
-        </form>
+          </form>
+        </div>
+      {% endfor %}
     </div>
+  </div>
 </body>
 </html>
