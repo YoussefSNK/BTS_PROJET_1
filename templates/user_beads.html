@@ -3,38 +3,64 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gérez vos perles</title>
+  <title>Gérez vos perles - Édition Premium</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Animation d'apparition pour les cartes */
+    .fade-in {
+      animation: fadeIn 0.8s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    /* Effet de survol sur les cartes avec dégradé subtil */
+    .card-hover:hover {
+      background: linear-gradient(135deg, rgba(255,255,255,0.98), rgba(245,245,245,0.98));
+    }
+    /* Animation pour le bouton lors du survol */
+    .btn-hover:hover {
+      transform: scale(1.05);
+    }
+  </style>
 </head>
-<body class="bg-gray-100 text-gray-800">
-  <div class="max-w-7xl mx-auto p-6">
-    <h1 class="text-3xl font-bold text-center mb-8">Gérez vos perles</h1>
-    
-    <!-- Grille responsive : 1 colonne sur mobile, 2 sur sm, 3 sur md, 4 sur lg -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-      {% for color in colors %}
-        <div class="bg-white shadow-lg rounded-lg p-4 flex flex-col items-center">
-          <!-- Aperçu de la couleur -->
-          <div class="w-16 h-16 rounded-full border border-gray-300" style="background-color: {{ color[1] }};"></div>
-          <div class="mt-3 text-center">
-            <p class="font-medium">{{ color[3] }} / {{ color[2] }}</p>
-            <p class="text-sm text-gray-600">{{ color[1] }}</p>
-          </div>
-          
-          <!-- Formulaire dédié à cette couleur -->
-          <form method="post" action="{{ url_for('user_beads') }}" class="mt-4 w-full">
-            <!-- Champ caché pour transmettre l'identifiant de la couleur -->
-            <input type="hidden" name="color_id" value="{{ color[0] }}">
-            <div class="flex items-center justify-center space-x-2">
-              <input type="number" name="quantity" value="{{ color[4] or 0 }}"
-                     class="w-20 px-2 py-1 border border-gray-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-blue-400">
-              <button type="submit" class="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 transition">
-                Update
-              </button>
+<body class="bg-gradient-to-br from-gray-50 to-gray-200 min-h-screen">
+
+  {% include 'navbar.html' %}
+
+  <div class="flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="w-full max-w-7xl">
+      <h1 class="text-4xl font-extrabold text-center text-gray-800 mb-12 tracking-tight">
+        Gérez vos perles
+      </h1>
+      <!-- Grille responsive pour afficher les cartes de perles -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+        {% for color in colors %}
+          <div class="fade-in card-hover bg-white/80 backdrop-blur-lg rounded-xl shadow-xl p-6 transform transition duration-300 hover:-translate-y-1 hover:shadow-2xl">
+            <div class="flex flex-col items-center">
+              <!-- Cercle coloré avec bordure et ombre pour accentuer la teinte -->
+              <div class="w-24 h-24 rounded-full border-4 border-white shadow-lg" style="background-color: {{ color[1] }};"></div>
+              <div class="mt-4 text-center">
+                <p class="text-xl font-bold text-gray-900">{{ color[3] }} / {{ color[2] }}</p>
+                <p class="text-sm text-gray-600">{{ color[1] }}</p>
+              </div>
+              <!-- Formulaire individuel pour la mise à jour -->
+              <form method="post" action="{{ url_for('user_beads') }}" class="mt-6 w-full">
+                <input type="hidden" name="color_id" value="{{ color[0] }}">
+                <div class="flex items-center justify-center space-x-3">
+                  <input type="number" name="quantity" value="{{ color[4] or 0 }}"
+                         class="w-20 px-3 py-2 border border-gray-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+                         placeholder="0">
+                  <button type="submit"
+                          class="btn-hover px-4 py-2 bg-gradient-to-r from-blue-500 to-teal-500 text-white font-semibold rounded-md shadow-md hover:from-blue-600 hover:to-teal-600 transition duration-300">
+                    Mettre à jour
+                  </button>
+                </div>
+              </form>
             </div>
-          </form>
-        </div>
-      {% endfor %}
+          </div>
+        {% endfor %}
+      </div>
     </div>
   </div>
 </body>
