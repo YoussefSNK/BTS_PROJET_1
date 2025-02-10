@@ -1,34 +1,43 @@
 <nav class="fixed top-0 left-0 w-full bg-white/90 shadow-md backdrop-blur-lg z-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center h-16">
-            <!-- Logo -->
-            <a href="/" class="text-2xl font-bold text-gray-900">Mon Site</a>
-
-            <!-- Menu -->
-            <div class="hidden md:flex space-x-6">
-                <a href="/poster_list" class="nav-link">🖼️ Posters</a>
-                <a href="/poster_creator" class="nav-link">🎨 Création</a>
-                <a href="/model_list" class="nav-link">📂 Modèles</a>
-                <a href="/user_beads" class="nav-link">🎨 Couleurs</a>
-                <a href="/image_availability" class="nav-link">🖼️ Disponibles</a>
-                <a href="/add_image" class="nav-link">➕ Ajouter</a>
-            </div>
-
-            <!-- Menu mobile -->
-            <div class="md:hidden">
-                <button id="menu-toggle" class="text-gray-900 text-2xl">☰</button>
-            </div>
+      <div class="flex justify-between items-center h-16">
+        <!-- Logo -->
+        <a href="/" class="text-2xl font-bold text-gray-900 transition hover:text-blue-600">
+          Mon Site
+        </a>
+  
+        <!-- Menu Desktop -->
+        <div class="hidden md:flex space-x-6">
+          <a href="/poster_list" class="nav-link">🖼️ Posters</a>
+          <a href="/poster_creator" class="nav-link">🎨 Création</a>
+          <a href="/model_list" class="nav-link">📂 Modèles</a>
+          <a href="/user_beads" class="nav-link">🎨 Couleurs</a>
+          <a href="/image_availability" class="nav-link">🖼️ Disponibles</a>
+          <a href="/add_image" class="nav-link">➕ Ajouter</a>
         </div>
+  
+        <!-- Bouton Menu Mobile -->
+        <div class="md:hidden">
+          <button id="menu-toggle" class="text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-600">
+            <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
     </div>
-
-    <!-- Menu déroulant mobile -->
-    <div id="mobile-menu" class="hidden md:hidden bg-white/90 shadow-lg">
-        <a href="/poster_list" class="block px-4 py-2 nav-link">🖼️ Posters</a>
-        <a href="/poster_creator" class="block px-4 py-2 nav-link">🎨 Création</a>
-        <a href="/model_list" class="block px-4 py-2 nav-link">📂 Modèles</a>
-        <a href="/user_beads" class="block px-4 py-2 nav-link">🎨 Couleurs</a>
-        <a href="/image_availability" class="block px-4 py-2 nav-link">🖼️ Disponibles</a>
-        <a href="/add_image" class="block px-4 py-2 nav-link">➕ Ajouter</a>
+  
+    <!-- Menu Mobile (déployable) -->
+    <div id="mobile-menu" class="overflow-hidden max-h-0 transition-all duration-300 ease-in-out md:hidden">
+      <div class="px-4 pt-2 pb-4 space-y-2">
+        <a href="/poster_list" class="nav-link block">🖼️ Posters</a>
+        <a href="/poster_creator" class="nav-link block">🎨 Création</a>
+        <a href="/model_list" class="nav-link block">📂 Modèles</a>
+        <a href="/user_beads" class="nav-link block">🎨 Couleurs</a>
+        <a href="/image_availability" class="nav-link block">🖼️ Disponibles</a>
+        <a href="/add_image" class="nav-link block">➕ Ajouter</a>
+      </div>
     </div>
 </nav>
 
@@ -37,9 +46,19 @@
         @apply text-gray-700 hover:text-blue-600 transition font-medium;
     }
 </style>
-
 <script>
-    document.getElementById('menu-toggle').addEventListener('click', function () {
-        document.getElementById('mobile-menu').classList.toggle('hidden');
+    // Sélection du bouton et du menu mobile
+    const menuToggle = document.getElementById('menu-toggle');
+    const mobileMenu = document.getElementById('mobile-menu');
+  
+    // Au clic, on bascule entre max-h-0 et max-h-96 pour un effet de déroulement
+    menuToggle.addEventListener('click', () => {
+      if (mobileMenu.classList.contains('max-h-0')) {
+        mobileMenu.classList.remove('max-h-0');
+        mobileMenu.classList.add('max-h-96');
+      } else {
+        mobileMenu.classList.remove('max-h-96');
+        mobileMenu.classList.add('max-h-0');
+      }
     });
 </script>
