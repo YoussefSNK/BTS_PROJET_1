@@ -1,92 +1,115 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image Availability</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Image Availability</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Vous pouvez ajouter ici des personnalisations supplémentaires si besoin */
+  </style>
 </head>
-<body class="bg-gray-100 text-gray-800">
-    <div class="max-w-4xl mx-auto mt-10 p-6 bg-white shadow-lg rounded-lg">
-        <h1 class="text-2xl font-semibold text-center mb-6">Image Availability</h1>
+<body class="bg-gray-50 text-gray-800">
+  <div class="max-w-7xl mx-auto py-10 px-4">
+    <h1 class="text-3xl font-bold text-center mb-8">Image Availability</h1>
 
-        <!-- Images complétables -->
-        <h2 class="text-xl font-semibold text-green-600 mb-4">Images You Can Complete ✅</h2>
-        <div class="space-y-6">
-            {% for image in image_data %}
-                {% if image[3] %}
-                    <div class="bg-gray-50 p-4 rounded-lg shadow">
-                        <div class="flex items-center space-x-4">
-                            <img src="{{ image[0] }}" alt="Image" class="w-24 h-auto rounded-md shadow">
-                            <div>
-                                <p class="text-lg font-medium">{{ image[1] }}</p>
-                            </div>
-                        </div>
-                        <table class="w-full mt-4 border border-gray-300 rounded-lg">
-                            <thead class="bg-gray-200">
-                                <tr>
-                                    <th class="py-2 px-4 text-left">Color</th>
-                                    <th class="py-2 px-4 text-left">Required</th>
-                                    <th class="py-2 px-4 text-left">Available</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for color in image[2] %}
-                                    <tr class="border-t border-gray-300">
-                                        <td class="py-2 px-4 flex items-center space-x-2">
-                                            <span class="w-6 h-6 rounded-full border border-gray-300" style="background-color: {{ color[0] }};"></span>
-                                            <span>{{ color[1] }}</span>
-                                        </td>
-                                        <td class="py-2 px-4">{{ color[2] }}</td>
-                                        <td class="py-2 px-4 text-green-600 font-medium">{{ color[3] }}</td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                {% endif %}
-            {% endfor %}
-        </div>
-
-        <!-- Images non complétables -->
-        <h2 class="text-xl font-semibold text-red-600 mt-10 mb-4">Images You Cannot Complete ❌</h2>
-        <div class="space-y-6">
-            {% for image in image_data %}
-                {% if not image[3] %}
-                    <div class="bg-gray-50 p-4 rounded-lg shadow">
-                        <div class="flex items-center space-x-4">
-                            <img src="{{ image[0] }}" alt="Image" class="w-24 h-auto rounded-md shadow">
-                            <div>
-                                <p class="text-lg font-medium">{{ image[1] }}</p>
-                            </div>
-                        </div>
-                        <table class="w-full mt-4 border border-gray-300 rounded-lg">
-                            <thead class="bg-gray-200">
-                                <tr>
-                                    <th class="py-2 px-4 text-left">Color</th>
-                                    <th class="py-2 px-4 text-left">Required</th>
-                                    <th class="py-2 px-4 text-left">Available</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for color in image[2] %}
-                                    <tr class="border-t border-gray-300">
-                                        <td class="py-2 px-4 flex items-center space-x-2">
-                                            <span class="w-6 h-6 rounded-full border border-gray-300" style="background-color: {{ color[0] }};"></span>
-                                            <span>{{ color[1] }}</span>
-                                        </td>
-                                        <td class="py-2 px-4">{{ color[2] }}</td>
-                                        <td class="py-2 px-4 font-medium {% if color[3] < color[2] %} text-red-600 {% else %} text-green-600 {% endif %}">
-                                            {{ color[3] }}
-                                        </td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                {% endif %}
-            {% endfor %}
-        </div>
+    <!-- Onglets pour basculer entre les images complétables et non complétables -->
+    <div class="flex justify-center mb-8">
+      <button id="tab-completable" class="px-4 py-2 font-medium text-blue-600 border-b-2 border-blue-600 focus:outline-none">
+        Images You Can Complete ✅
+      </button>
+      <button id="tab-noncompletable" class="ml-4 px-4 py-2 font-medium text-gray-700 border-b-2 border-transparent hover:border-blue-600 focus:outline-none">
+        Images You Cannot Complete ❌
+      </button>
     </div>
+
+    <!-- Section des images complétables -->
+    <div id="content-completable" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      {% for image in image_data %}
+        {% if image[3] %}
+          <div class="relative bg-white rounded-xl shadow-lg overflow-hidden transform transition hover:scale-105">
+            <!-- Badge indiquant l'état -->
+            <div class="absolute top-2 right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+              ✅
+            </div>
+            <img src="{{ image[0] }}" alt="{{ image[1] }}" class="w-full h-48 object-cover">
+            <div class="p-4">
+              <h3 class="text-xl font-bold mb-2">{{ image[1] }}</h3>
+              <div class="space-y-2">
+                {% for color in image[2] %}
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                      <span class="w-6 h-6 rounded-full border border-gray-300" style="background-color: {{ color[0] }};"></span>
+                      <span class="text-sm font-medium">{{ color[1] }}</span>
+                    </div>
+                    <div class="text-sm">
+                      <span class="mr-2">Req: {{ color[2] }}</span>
+                      <span class="font-semibold text-green-600">Avail: {{ color[3] }}</span>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    <!-- Section des images non complétables -->
+    <div id="content-noncompletable" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 hidden">
+      {% for image in image_data %}
+        {% if not image[3] %}
+          <div class="relative bg-white rounded-xl shadow-lg overflow-hidden transform transition hover:scale-105">
+            <!-- Badge indiquant l'état -->
+            <div class="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+              ❌
+            </div>
+            <img src="{{ image[0] }}" alt="{{ image[1] }}" class="w-full h-48 object-cover">
+            <div class="p-4">
+              <h3 class="text-xl font-bold mb-2">{{ image[1] }}</h3>
+              <div class="space-y-2">
+                {% for color in image[2] %}
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                      <span class="w-6 h-6 rounded-full border border-gray-300" style="background-color: {{ color[0] }};"></span>
+                      <span class="text-sm font-medium">{{ color[1] }}</span>
+                    </div>
+                    <div class="text-sm">
+                      <span class="mr-2">Req: {{ color[2] }}</span>
+                      <span class="font-semibold {% if color[3] < color[2] %} text-red-600 {% else %} text-green-600 {% endif %}">
+                        Avail: {{ color[3] }}
+                      </span>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <script>
+    // Gestion de la bascule entre onglets
+    const tabCompletable = document.getElementById('tab-completable');
+    const tabNonCompletable = document.getElementById('tab-noncompletable');
+    const contentCompletable = document.getElementById('content-completable');
+    const contentNonCompletable = document.getElementById('content-noncompletable');
+
+    tabCompletable.addEventListener('click', () => {
+      tabCompletable.classList.add('text-blue-600', 'border-blue-600');
+      tabNonCompletable.classList.remove('text-blue-600', 'border-blue-600');
+      contentCompletable.classList.remove('hidden');
+      contentNonCompletable.classList.add('hidden');
+    });
+
+    tabNonCompletable.addEventListener('click', () => {
+      tabNonCompletable.classList.add('text-blue-600', 'border-blue-600');
+      tabCompletable.classList.remove('text-blue-600', 'border-blue-600');
+      contentNonCompletable.classList.remove('hidden');
+      contentCompletable.classList.add('hidden');
+    });
+  </script>
 </body>
 </html>
