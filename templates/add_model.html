@@ -1,21 +1,168 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Add Image</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ajouter une Image</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/header.css') }}">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    boxShadow: {
+                        'glow': '0 0 20px rgba(59, 130, 246, 0.8)',
+                    }
+                }
+            }
+        };
+    </script>
 </head>
-<body>
-    <h1>Add a New Image</h1>
-    <form action="{{ url_for('add_image') }}" method="post" enctype="multipart/form-data">
-        <label for="image">Image:</label>
-        <input type="file" name="image" id="image" required>
-        <br><br>
-        <label for="description">Description:</label>
-        <textarea name="description" id="description" rows="4" cols="50"></textarea>
-        <br><br>
-        <h3>Colors:</h3>
-        <br>
-        <button type="submit">Add Image</button>
-    </form>
+<body class="relative min-h-screen flex flex-col items-center justify-center text-gray-800 overflow-hidden">
+
+    <!-- Conteneur des particules -->
+    <div id="particles-js" class="absolute inset-0"></div>
+
+    <!-- Image de fond floutée avec effet de mouvement -->
+    <div class="absolute inset-0 animate-move-bg">
+        <img src="{{ url_for('static', filename='images/background.png') }}" class="w-full h-full object-cover blur-xs" alt="Background">
+    </div>
+
+    <!-- Overlay semi-transparent -->
+    <div class="absolute inset-0 bg-black/30 backdrop-blur-lg"></div>
+
+    {% include 'header.html' %}
+
+    <!-- Conteneur principal avec effet glassmorphism -->
+    <div class="relative z-10 max-w-lg w-full bg-white/20 backdrop-blur-md shadow-2xl rounded-2xl p-8 transition-all duration-300 hover:shadow-glow opacity-0 transform scale-95 animate-fade-in">
+        <h1 class="text-3xl font-bold text-white text-center mb-6">Ajouter une Nouvelle Image</h1>
+
+        <form action="{{ url_for('add_image') }}" method="post" enctype="multipart/form-data" class="space-y-4">
+            <!-- Drag & Drop Upload -->
+            <div class="drop-zone relative border-2 border-dashed border-blue-400 rounded-lg p-6 text-center cursor-pointer transition hover:bg-blue-400/10">
+                <input type="file" name="image" id="image" accept="image/*" required class="hidden">
+                <p class="text-lg text-white">📂 Glissez une image ici ou cliquez pour sélectionner</p>
+                <img id="preview" class="hidden mt-4 max-h-40 mx-auto rounded-lg shadow-md">
+            </div>
+
+            <!-- Champ pour la description -->
+            <div>
+                <label for="description" class="block text-lg font-medium text-white">Description :</label>
+                <textarea name="description" id="description" rows="4" class="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-blue-300 focus:outline-none bg-gray-100/80"></textarea>
+            </div>
+
+            <!-- Bouton de soumission avec effet lumineux -->
+            <button type="submit" class="btn w-full">
+                <span class="icon">➕</span> Ajouter l'Image
+            </button>
+        </form>
+    </div>
+
+    <style>
+        /* Effet d’animation de l’image de fond */
+        @keyframes moveBackground {
+            0% { transform: scale(1.05) translateY(0); }
+            50% { transform: scale(1.05) translateY(-10px); }
+            100% { transform: scale(1.05) translateY(0); }
+        }
+        .animate-move-bg {
+            animation: moveBackground 8s ease-in-out infinite;
+        }
+
+        /* Animation d'apparition */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.6s ease-out forwards;
+        }
+
+        /* Effet lumineux au survol */
+        .btn {
+            @apply flex items-center justify-center bg-blue-600 text-white py-3 px-6 rounded-lg shadow-lg text-lg font-medium transition duration-300 hover:bg-blue-700 hover:shadow-glow;
+            gap: 10px;
+        }
+
+        /* Style du drag & drop */
+        .drop-zone {
+            position: relative;
+            transition: border-color 0.3s, background 0.3s;
+        }
+        .drop-zone:hover {
+            border-color: #3b82f6;
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+    </style>
+
+    <!-- Script pour les particules -->
+    <script>
+        particlesJS("particles-js", {
+            particles: {
+                number: { value: 100, density: { enable: true, value_area: 800 } },
+                color: { value: "#ffffff" },
+                shape: { type: "circle" },
+                opacity: { value: 0.6, random: true, anim: { enable: true, speed: 1, opacity_min: 0.1, sync: false } },
+                size: { value: 3, random: true, anim: { enable: true, speed: 4, size_min: 0.3, sync: false } },
+                move: { enable: true, speed: 1.5, direction: "none", random: true, straight: false, out_mode: "out" }
+            },
+            interactivity: {
+                detect_on: "canvas",
+                events: { onhover: { enable: true, mode: "repulse" }, onclick: { enable: true, mode: "push" } },
+                modes: {
+                    repulse: { distance: 80, duration: 0.4 },
+                    push: { particles_nb: 4 }
+                }
+            },
+            retina_detect: true
+        });
+    </script>
+
+    <!-- Script pour l’upload avec Drag & Drop + prévisualisation -->
+    <script>
+        const dropZone = document.querySelector('.drop-zone');
+        const fileInput = document.getElementById('image');
+        const preview = document.getElementById('preview');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    preview.src = e.target.result;
+                    preview.classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        dropZone.addEventListener('dragover', (event) => {
+            event.preventDefault();
+            dropZone.classList.add('border-blue-500');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('border-blue-500');
+        });
+
+        dropZone.addEventListener('drop', (event) => {
+            event.preventDefault();
+            dropZone.classList.remove('border-blue-500');
+
+            const file = event.dataTransfer.files[0];
+            fileInput.files = event.dataTransfer.files;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                preview.src = e.target.result;
+                preview.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        });
+    </script>
+
 </body>
 </html>
