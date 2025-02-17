@@ -326,24 +326,30 @@ def image_availability():
             # Vérifier si l'utilisateur a assez de perles pour chaque couleur
             sufficient = True
             colors_status = []
+            total_required = 0
+            total_available = 0
+        
             for color in image_colors:
                 color_id = color[0]
                 hex_code = color[1]
                 color_name = color[2]
                 required_quantity = color[3]
                 user_quantity = user_colors.get(color_id, 0)
+                total_required += required_quantity
+                total_available += min(user_quantity, required_quantity)  # Ne pas dépasser le requis
                 if user_quantity < required_quantity:
                     sufficient = False
                 colors_status.append((hex_code, color_name, required_quantity, user_quantity))
 
-            image_data.append((image_path, description, colors_status, sufficient))
+            # Calcul du pourcentage de perles possédées
+            completion_rate = round((total_available / total_required * 100), 1) if total_required > 0 else 0
+            image_data.append((image_path, description, colors_status, sufficient, completion_rate))
 
         conn.close()
 
         return render_template('image_availability.html', image_data=image_data)
     else:
         return redirect('/')
-
 
 
 @app.route('/poster_creator')
