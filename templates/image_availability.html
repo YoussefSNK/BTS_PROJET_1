@@ -21,7 +21,7 @@
       <button id="tab-completable" class="px-4 py-2 font-medium text-blue-600 border-b-2 border-blue-600 focus:outline-none">
         Images You Can Complete ✅
       </button>
-      <button id="tab-noncompletable" class="ml-4 px-4 py-2 font-medium text-gray-700 border-b-2 border-transparent hover:border-blue-600 focus:outline-none">
+      <button id="tab-noncompletable" class="ml-4 px-4 py-2 font-medium text-gray-700 border-b-2 border-gray-300 hover:border-blue-600 focus:outline-none">
         Images You Cannot Complete ❌
       </button>
     </div>
@@ -106,18 +106,23 @@
     const contentCompletable = document.getElementById('content-completable');
     const contentNonCompletable = document.getElementById('content-noncompletable');
 
+    function activateTab(activeTab, inactiveTab, activeContent, inactiveContent) {
+        activeTab.classList.add('text-blue-600', 'border-blue-600', 'border-b-2');
+        activeTab.classList.remove('text-gray-700', 'border-gray-300');
+
+        inactiveTab.classList.add('text-gray-700', 'border-gray-300', 'border-b-2');
+        inactiveTab.classList.remove('text-blue-600', 'border-blue-600');
+
+        activeContent.classList.remove('hidden');
+        inactiveContent.classList.add('hidden');
+    }
+
     tabCompletable.addEventListener('click', () => {
-      tabCompletable.classList.add('text-blue-600', 'border-blue-600');
-      tabNonCompletable.classList.remove('text-blue-600', 'border-blue-600');
-      contentCompletable.classList.remove('hidden');
-      contentNonCompletable.classList.add('hidden');
+        activateTab(tabCompletable, tabNonCompletable, contentCompletable, contentNonCompletable);
     });
 
     tabNonCompletable.addEventListener('click', () => {
-      tabNonCompletable.classList.add('text-blue-600', 'border-blue-600');
-      tabCompletable.classList.remove('text-blue-600', 'border-blue-600');
-      contentNonCompletable.classList.remove('hidden');
-      contentCompletable.classList.add('hidden');
+        activateTab(tabNonCompletable, tabCompletable, contentNonCompletable, contentCompletable);
     });
   </script>
 </body>
