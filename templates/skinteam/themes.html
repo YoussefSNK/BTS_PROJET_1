@@ -60,6 +60,10 @@
                             <h2 class="text-2xl font-semibold text-indigo-300 drop-shadow-md">{{ theme.nom }}</h2>
 
                             <div class="mt-4">
+                                <a href="{{ url_for('skinteam_bp.assign_skins', theme_id=theme.id) }}" 
+                                class="inline-block px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-full hover:bg-indigo-700 transition relative z-20">
+                                    ✨ Attribuer des skins
+                                </a>
                             </div>
 
                             {% if theme.id in theme_skins and theme_skins[theme.id] %}

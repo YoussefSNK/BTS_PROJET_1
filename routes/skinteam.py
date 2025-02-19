@@ -44,3 +44,39 @@ def create_theme():
         conn.close()
         return redirect(url_for("skinteam_bp.list_themes"))
     return render_template("skinteam/create_theme.html")
+
+@skinteam_bp.route('/themes/<int:theme_id>/assign_skins', methods=["GET", "POST"])
+def assign_skins(theme_id):
+    conn = get_db_connection()
+
+    if request.method == "POST":
+        selected_skins = request.form.getlist("skins")
+
+        # Effacer les skins déjà assignés à ce thème
+        conn.execute("DELETE FROM skin_theme WHERE theme_id = ?", (theme_id,))
+
+        # Insérer les nouveaux liens
+        for skin_id in selected_skins:
+            conn.execute("INSERT INTO skin_theme (skin_id, theme_id) VALUES (?, ?)", (skin_id, theme_id))
+
+        conn.commit()
+        conn.close()
+        return redirect(url_for("skinteam_bp.list_themes"))
+
+    else:
+        # Récupérer le thème
+        theme = conn.execute("SELECT * FROM theme WHERE id = ?", (theme_id,)).fetchone()
+
+        # Récupérer les skins déjà assignés
+        assigned_skins = conn.execute("""
+            SELECT skin.*
+            FROM skin
+            JOIN skin_theme ON skin.id = skin_theme.skin_id
+            WHERE skin_theme.theme_id = ?
+        """, (theme_id,)).fetchall()
+
+        # Récupérer tous les skins disponibles
+        all_skins = conn.execute("SELECT * FROM skin").fetchall()
+
+        conn.close()
+        return render_template("skinteam/assign_skins.html", theme=theme, assigned_skins=assigned_skins, all_skins=all_skins)
