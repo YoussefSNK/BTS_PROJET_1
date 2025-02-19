@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <title>Liste des Thèmes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        #starfield {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            background: radial-gradient(circle at center, rgba(0, 0, 30, 0.8), black);
+        }
+    
+        html, body {
+            min-height: 100%;
+            height: auto;
+            overflow-y: auto !important;
+        }
+    
+        .content-wrapper {
+            min-height: 150vh;
+        }
+    </style>
+</head>
+<body class="bg-black text-white min-h-screen relative overflow-hidden">
+    
+    <canvas id="starfield"></canvas>
+    <div class="content-wrapper">
+
+        {% include 'navbar.html' %}
+
+        <div class="max-w-7xl mx-auto px-6 py-12 relative z-10">
+            <div class="text-center mb-6">
+                <h1 class="text-4xl font-extrabold tracking-wide text-white">
+                    🌌 <span class="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-600">Liste des Thèmes</span>
+                </h1>
+            </div>
+
+            <div class="flex justify-center mb-8 space-x-6">
+            </div>
+
+            <div class="space-y-12">
+                {% for theme in themes %}
+                <div class="relative bg-black/40 border border-indigo-500 shadow-lg rounded-xl p-6 overflow-hidden backdrop-blur-lg">
+                    <div class="absolute inset-0 bg-indigo-500 opacity-20 blur-3xl"></div>
+
+                    <div class="flex flex-col lg:flex-row items-center lg:items-start space-y-6 lg:space-y-0 lg:space-x-8 relative z-10">
+                        <img src="{{ theme.image_url }}" alt="{{ theme.nom }}" class="w-48 h-48 object-cover rounded-lg shadow-md border border-indigo-400">
+
+                        <div class="flex-1">
+                            <h2 class="text-2xl font-semibold text-indigo-300 drop-shadow-md">{{ theme.nom }}</h2>
+
+                            <div class="mt-4">
+                            </div>
+
+                            {% if theme.id in theme_skins and theme_skins[theme.id] %}
+                                <h3 class="text-lg text-blue-300 mt-4">💠 Skins associés :</h3>
+                                <div class="flex overflow-x-auto space-x-4 mt-2 p-2 bg-black/20 rounded-lg scrollbar-hide">
+                                    {% for skin in theme_skins[theme.id] %}
+                                    <div class="relative w-28 min-w-[112px] bg-black/50 border border-purple-500 shadow-md rounded-lg p-2 text-center">
+                                        <img src="{{ skin.image_url }}" alt="{{ skin.nom }}" class="w-full h-20 object-cover rounded">
+                                        <p class="text-xs text-gray-300 mt-1 truncate">{{ skin.nom }}</p>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p class="text-gray-400 mt-4">Aucun skin assigné.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const canvas = document.getElementById('starfield');
+        const ctx = canvas.getContext('2d');
+    
+        let stars = [];
+        const numStars = 200;
+    
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = document.documentElement.scrollHeight;
+        }
+    
+        function initStars() {
+            resizeCanvas();
+            stars = [];
+            for (let i = 0; i < numStars; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 2,
+                    speed: Math.random() * 0.5 + 0.2
+                });
+            }
+        }
+    
+        function animateStars() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+            for (let star of stars) {
+                star.y += star.speed;
+                if (star.y > canvas.height) {
+                    star.y = 0;
+                    star.x = Math.random() * canvas.width;
+                }
+    
+                ctx.fillStyle = "white";
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+    
+            requestAnimationFrame(animateStars);
+        }
+    
+        window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('scroll', resizeCanvas);
+    
+        initStars();
+        animateStars();
+    </script>
+
+</body>
+</html>

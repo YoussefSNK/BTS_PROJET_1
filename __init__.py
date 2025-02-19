@@ -10,6 +10,7 @@ from collections import Counter
 from datetime import datetime
 
 from routes.posters import poster_bp
+from routes.skinteam import skinteam_bp
 
 app = Flask(__name__)                                                                                                                  
 app.secret_key = b'_5#y2L"F4Q8z\n\xec]/'  # Clé secrète pour les sessions
@@ -30,6 +31,7 @@ def allowed_file(filename):
 
 
 app.register_blueprint(poster_bp)
+app.register_blueprint(skinteam_bp)
 
 
 
