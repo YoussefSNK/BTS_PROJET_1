@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <title>Liste des Champions</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Starfield Background */
+        #starfield {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            background: radial-gradient(circle at center, rgba(0, 0, 30, 0.8), black);
+        }
+        html, body {
+            min-height: 100%;
+            height: auto;
+            overflow-y: auto !important;
+        }
+        .content-wrapper {
+            min-height: 150vh;
+        }
+    </style>
+</head>
+<body class="bg-black text-white min-h-screen relative overflow-hidden">
+    <canvas id="starfield"></canvas>
+    <div class="content-wrapper">
+        {% include 'navbar.html' %}
+        <div class="max-w-7xl mx-auto px-6 py-12 relative z-10">
+            <!-- En-tête -->
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-extrabold tracking-wide">
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600">
+                        Liste des Champions
+                    </span>
+                </h1>
+            </div>
+
+            <!-- Tableau des Champions -->
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-black border border-indigo-500 rounded-lg">
+                    <thead>
+                        <tr class="bg-indigo-600 text-white">
+                            <th class="px-4 py-2 border">Image</th>
+                            <th class="px-4 py-2 border">Nom</th>
+                            <th class="px-4 py-2 border">Rôles</th>
+                            <th class="px-4 py-2 border">Modifier</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-700">
+                        {% for champion in champions | sort(attribute='nom') %}
+                        <tr class="hover:bg-gray-800">
+                            <td class="px-4 py-2 border">
+                                <img src="https://ddragon.leagueoflegends.com/cdn/14.1.1/img/champion/{{ champion.nom }}.png" alt="{{ champion.nom }}" class="w-16 h-16 mx-auto">
+                            </td>
+                            <td class="px-4 py-2 border text-center">{{ champion.nom }}</td>
+                            <td class="px-4 py-2 border text-center">
+                                <div class="flex justify-center space-x-2">
+                                    {% for role in champion_roles[champion.id] %}
+                                        <img src="{{ role.image_url }}" title="{{ role.nom }}" alt="{{ role.nom }}" class="w-8 h-8">
+                                    {% endfor %}
+                                </div>
+                            </td>
+                            <td class="px-4 py-2 border text-center">
+                                <form action="{{ url_for('skinteam_bp.update_champion_roles', champion_id=champion.id) }}" method="POST" class="space-y-2">
+                                    <div class="flex flex-wrap justify-center gap-2">
+                                        {% for role in roles %}
+                                            <label class="inline-flex items-center space-x-1">
+                                                <input type="checkbox" name="roles" value="{{ role.id }}"
+                                                    {% if role.id in champion_roles[champion.id] | map(attribute='id') | list %} checked {% endif %}
+                                                    class="form-checkbox h-4 w-4 text-blue-600">
+                                                <span class="text-sm">{{ role.nom }}</span>
+                                            </label>
+                                        {% endfor %}
+                                    </div>
+                                    <button type="submit" class="mt-2 px-4 py-2 bg-blue-600 rounded hover:bg-blue-700 transition text-white">
+                                        Mettre à jour
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script du starfield -->
+    <script>
+        const canvas = document.getElementById('starfield');
+        const ctx = canvas.getContext('2d');
+        let stars = [];
+        const numStars = 200;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = document.documentElement.scrollHeight;
+        }
+
+        function initStars() {
+            resizeCanvas();
+            stars = [];
+            for (let i = 0; i < numStars; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 2,
+                    speed: Math.random() * 0.5 + 0.2
+                });
+            }
+        }
+
+        function animateStars() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let star of stars) {
+                star.y += star.speed;
+                if (star.y > canvas.height) {
+                    star.y = 0;
+                    star.x = Math.random() * canvas.width;
+                }
+                ctx.fillStyle = "white";
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+            requestAnimationFrame(animateStars);
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('scroll', resizeCanvas);
+        initStars();
+        animateStars();
+    </script>
+</body>
+</html>
