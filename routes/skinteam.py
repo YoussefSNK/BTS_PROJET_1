@@ -32,3 +32,15 @@ def list_themes():
 
     conn.close()
     return render_template("skinteam/themes.html", themes=themes, theme_skins=theme_skins)
+
+@skinteam_bp.route('/themes/create', methods=["GET", "POST"])
+def create_theme():
+    if request.method == "POST":
+        nom = request.form["nom"]
+        image_url = request.form["image_url"]
+        conn = get_db_connection()
+        conn.execute("INSERT INTO theme (nom, image_url) VALUES (?, ?)", (nom, image_url))
+        conn.commit()
+        conn.close()
+        return redirect(url_for("skinteam_bp.list_themes"))
+    return render_template("skinteam/create_theme.html")

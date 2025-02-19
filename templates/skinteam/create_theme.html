@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <title>Créer un Thème</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="relative min-h-screen flex items-center justify-center bg-black overflow-hidden">
+    
+    <div class="absolute inset-0 -z-10">
+        <canvas id="starfield"></canvas>
+    </div>
+
+    <div class="bg-white/10 backdrop-blur-lg shadow-lg border border-blue-500/50 p-8 rounded-2xl w-[90%] max-w-lg text-white animate-fade-in">
+        <h1 class="text-3xl font-bold text-center text-blue-400 mb-6">🚀 Créer un Thème</h1>
+
+        <form method="POST" class="space-y-6">
+            <div>
+                <label for="nom" class="block text-sm font-medium text-blue-300">Nom du thème :</label>
+                <input type="text" id="nom" name="nom" required 
+                       class="mt-1 w-full px-4 py-2 bg-transparent border border-blue-500 rounded-lg outline-none text-white transition focus:ring-2 focus:ring-blue-400">
+            </div>
+
+            <div>
+                <label for="image_url" class="block text-sm font-medium text-blue-300">URL de l'image :</label>
+                <input type="text" id="image_url" name="image_url" required 
+                       class="mt-1 w-full px-4 py-2 bg-transparent border border-blue-500 rounded-lg outline-none text-white transition focus:ring-2 focus:ring-blue-400">
+            </div>
+
+            <button type="submit" 
+                    class="w-full py-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold text-lg shadow-md hover:scale-105 transition-all duration-300">
+                🌠 Créer le Thème
+            </button>
+        </form>
+
+        <p class="mt-6 text-center">
+            <a href="{{ url_for('skinteam_bp.list_themes') }}" 
+               class="text-blue-400 hover:text-blue-300 transition">⬅️ Retour à la liste des thèmes</a>
+        </p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('starfield');
+        const ctx = canvas.getContext('2d');
+        let stars = [];
+        const numStars = 150;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        function initStars() {
+            resizeCanvas();
+            stars = [];
+            for (let i = 0; i < numStars; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 2,
+                    speed: Math.random() * 0.5 + 0.2
+                });
+            }
+        }
+
+        function animateStars() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let star of stars) {
+                star.y += star.speed;
+                if (star.y > canvas.height) {
+                    star.y = 0;
+                    star.x = Math.random() * canvas.width;
+                }
+                ctx.fillStyle = "white";
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+            requestAnimationFrame(animateStars);
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        initStars();
+        animateStars();
+    </script>
+
+    <style>
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fade-in 1s ease-out;
+        }
+    </style>
+
+</body>
+</html>
