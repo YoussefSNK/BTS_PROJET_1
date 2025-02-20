@@ -44,6 +44,7 @@
         const ctx = canvas.getContext('2d');
         let stars = [];
         const numStars = 200;
+        const maxDepth = 100;
 
         function resizeCanvas() {
             canvas.width = window.innerWidth;
@@ -55,25 +56,36 @@
             stars = [];
             for (let i = 0; i < numStars; i++) {
                 stars.push({
-                    x: Math.random() * canvas.width,
-                    y: Math.random() * canvas.height,
-                    size: Math.random() * 2,
-                    speed: Math.random() * 0.5 + 0.2
+                    x: Math.random() * canvas.width - canvas.width / 2,
+                    y: Math.random() * canvas.height - canvas.height / 2,
+                    z: Math.random() * maxDepth
                 });
             }
         }
 
         function animateStars() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+
             for (let star of stars) {
-                star.y += star.speed;
-                if (star.y > canvas.height) {
-                    star.y = 0;
-                    star.x = Math.random() * canvas.width;
+                star.z -= 0.5;
+                if (star.z <= 0) {
+                    star.x = Math.random() * canvas.width - canvas.width / 2;
+                    star.y = Math.random() * canvas.height - canvas.height / 2;
+                    star.z = maxDepth;
                 }
-                ctx.fillStyle = "white";
+    
+                const k = 128 / star.z;
+                const x = star.x * k + cx;
+                const y = star.y * k + cy;
+                const size = (1 - star.z / maxDepth) * 3;
+    
+                ctx.fillStyle = 'white';
                 ctx.beginPath();
-                ctx.arc(star.x, star.y, star.size, 0, 2 * Math.PI);
+                ctx.arc(x, y, size, 0, 2 * Math.PI);
                 ctx.fill();
             }
             requestAnimationFrame(animateStars);
