@@ -95,13 +95,12 @@
     <script>
         const canvas = document.getElementById('starfield');
         const ctx = canvas.getContext('2d');
-    
         let stars = [];
         const numStars = 200;
     
         function resizeCanvas() {
             canvas.width = window.innerWidth;
-            canvas.height = document.documentElement.scrollHeight;
+            canvas.height = window.innerHeight;
         }
     
         function initStars() {
