@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <title>Les compo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        #starfield {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            background: radial-gradient(circle at center, rgba(0, 0, 30, 0.8), black);
+        }
+        html, body {
+            min-height: 100%;
+            height: auto;
+            overflow-y: auto !important;
+        }
+        .content-wrapper {
+            min-height: 150vh;
+        }
+    </style>
+</head>
+
+<body class="bg-black text-white min-h-screen relative overflow-hidden">
+    <canvas id="starfield"></canvas>
+    <div class="content-wrapper">
+        {% include 'navbar.html' %}
+        <div class="max-w-7xl mx-auto px-6 py-12 relative z-10">
+            <div class="text-center mb-6">
+                <h1 class="text-4xl font-extrabold tracking-wide">
+                    🏆 Combinaisons d'équipes valides
+                </h1>
+            </div>
+
+            <form action="{{ url_for('skinteam_bp.team_combinations') }}" method="POST" class="mb-8">
+                <div class="grid grid-cols-5 gap-4">
+                    {% for i in range(1, 6) %}
+                        <input type="number" name="user{{ i }}" placeholder="ID Joueur {{ i }}"
+                            class="w-full px-4 py-2 bg-gray-800 text-white border border-gray-700 rounded-lg focus:ring-blue-600"
+                            value="{{ user_ids[i-1] if user_ids|length >= i else '' }}">
+                    {% endfor %}
+                </div>
+                <button type="submit" class="mt-6 px-6 py-3 text-lg font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">
+                    Rechercher
+                </button>
+            </form>
+
+            {% if valid_teams %}
+                <div class="space-y-12">
+                    {% for team in valid_teams %}
+                        <div class="bg-black/50 p-6 rounded-xl shadow-lg border border-gray-700">
+                            <h2 class="text-2xl font-semibold text-indigo-300 mb-4">Équipe {{ loop.index }}</h2>
+                            <div class="grid grid-cols-5 gap-4 text-center">
+                                {% for role, skin in team.items() %}
+                                    <div class="p-4 border border-indigo-500 rounded-lg bg-black/40">
+                                        <h3 class="text-lg font-semibold text-blue-400">{{ role }}</h3>
+                                        {% if skin %}
+                                            <img src="{{ skin.image_url }}" alt="{{ skin.nom }}"
+                                                class="w-20 h-20 object-cover rounded-lg mx-auto mb-2">
+                                            <p class="text-sm">{{ skin.nom }}</p>
+                                            <p class="text-xs text-gray-400">Joueur: {{ skin.owner }}</p>
+                                        {% else %}
+                                            <p class="text-gray-500">Aucun skin</p>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-gray-500 text-center mt-6">Aucune équipe trouvée avec ces joueurs.</p>
+            {% endif %}
+        </div>
+    </div>
+</body>

@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for
 import sqlite3
+from itertools import product, combinations
 
 skinteam_bp = Blueprint('skinteam_bp', __name__)
 
@@ -147,3 +148,51 @@ def user_skins(user_id):
         conn.close()
         
         return render_template('skinteam/user_skins.html', user_id=user_id, owned_skins=owned_skins, all_skins=all_skins)
+
+
+@skinteam_bp.route('/team_combinations', methods=["GET", "POST"])
+def team_combinations():
+    user_ids = []
+    valid_teams = []
+    
+    if request.method == "POST":
+        user_ids = [request.form.get(f'user{i}') for i in range(1, 6)]
+        user_ids = [int(uid) for uid in user_ids if uid]
+        
+        if len(user_ids) == 5:
+            conn = get_db_connection()
+            
+            user_skins = {}
+            for user_id in user_ids:
+                skins = conn.execute("""
+                    SELECT skin.id, skin.nom, skin.image_url, skin.champion_id, theme.id as theme_id, role.id as role_id, role.nom as role_name
+                    FROM utilisateur_skin
+                    JOIN skin ON utilisateur_skin.skin_id = skin.id
+                    JOIN skin_theme ON skin.id = skin_theme.skin_id
+                    JOIN theme ON skin_theme.theme_id = theme.id
+                    JOIN champion_role ON skin.champion_id = champion_role.champion_id
+                    JOIN role ON champion_role.role_id = role.id
+                    WHERE utilisateur_skin.utilisateur_id = ?
+                """, (user_id,)).fetchall()
+                user_skins[user_id] = [dict(skin) | {"owner": user_id} for skin in skins]  # Convertir en dict + ajouter l'owner
+            
+            conn.close()
+            
+            all_skins = [user_skins[uid] for uid in user_ids]
+            possible_teams = product(*all_skins)
+            
+            for team in possible_teams:
+                themes = {skin['theme_id'] for skin in team}
+                roles = {skin['role_id']: skin for skin in team}
+
+                if len(themes) == 1 and len(roles) == 5:  # 1 seul thème et 5 rôles différents
+                    structured_team = {
+                        "TOP": roles.get(1),
+                        "JUNGLE": roles.get(2),
+                        "MID": roles.get(3),
+                        "ADC": roles.get(4),
+                        "SUPP": roles.get(5),
+                    }
+                    valid_teams.append(structured_team)
+    
+    return render_template("skinteam/team_combinations.html", user_ids=user_ids, valid_teams=valid_teams)
