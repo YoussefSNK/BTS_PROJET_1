@@ -115,3 +115,35 @@ def assign_skins(theme_id):
 
         conn.close()
         return render_template("skinteam/assign_skins.html", theme=theme, assigned_skins=assigned_skins, all_skins=all_skins)
+    
+@skinteam_bp.route('/user/<int:user_id>/skins', methods=['GET', 'POST'])
+def user_skins(user_id):
+    conn = get_db_connection()
+
+    if request.method == 'POST':
+        selected_skins = request.form.getlist('skins')
+
+        # Supprimer les anciennes associations
+        conn.execute('DELETE FROM utilisateur_skin WHERE utilisateur_id = ?', (user_id,))
+        
+        # Ajouter les nouvelles associations
+        for skin_id in selected_skins:
+            conn.execute('INSERT INTO utilisateur_skin (utilisateur_id, skin_id) VALUES (?, ?)', (user_id, skin_id))
+
+        conn.commit()
+        conn.close()
+        return redirect(url_for('skinteam_bp.user_skins', user_id=user_id))
+
+    else:
+        # Récupérer les skins possédés par l'utilisateur
+        owned_skins = conn.execute('''
+            SELECT skin.* FROM skin
+            JOIN utilisateur_skin ON skin.id = utilisateur_skin.skin_id
+            WHERE utilisateur_skin.utilisateur_id = ?
+        ''', (user_id,)).fetchall()
+
+        # Récupérer tous les skins disponibles
+        all_skins = conn.execute('SELECT * FROM skin').fetchall()
+        conn.close()
+        
+        return render_template('skinteam/user_skins.html', user_id=user_id, owned_skins=owned_skins, all_skins=all_skins)
