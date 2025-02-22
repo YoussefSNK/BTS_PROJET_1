@@ -2,7 +2,7 @@ import requests
 import sqlite3
 
 # URL de l'API DDragon
-URL = "https://ddragon.leagueoflegends.com/cdn/14.1.1/data/fr_FR/championFull.json"
+URL = "https://ddragon.leagueoflegends.com/cdn/15.4.1/data/fr_FR/championFull.json"
 IMG_URL_TEMPLATE = "https://ddragon.leagueoflegends.com/cdn/img/champion/loading/{}_{}.jpg"
 
 # Connexion à la base SQLite
@@ -19,7 +19,7 @@ def fetch_champions():
 def insert_champion(champion):
     cursor.execute("""
         INSERT INTO champion (id, nom, titre, image_url) VALUES (?, ?, ?, ?)
-    """, (champion["key"], champion["name"], champion["title"], f"https://ddragon.leagueoflegends.com/cdn/14.1.1/img/champion/{champion['image']['full']}"))
+    """, (champion["key"], champion["name"], champion["title"], f"https://ddragon.leagueoflegends.com/cdn/15.4.1/img/champion/{champion['image']['full']}"))
 
 def insert_skin(skin, champion_name, champion_id):
     skin_image_url = IMG_URL_TEMPLATE.format(champion_name, skin["num"])
