@@ -45,11 +45,11 @@ def return_home():
 
 
 @app.route('/sign_up', methods=['GET'])
-def formulaire_client():
+def register_form():
     return render_template('signup.html')
 
 @app.route('/sign_up', methods=['POST'])
-def enregistrer_client():
+def register_user():
     login = request.form['login']
     password = request.form['password']
 
