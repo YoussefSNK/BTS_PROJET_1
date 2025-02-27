@@ -40,7 +40,7 @@ def return_home():
     if 'authentifie' in session and session['authentifie']:
         return render_template('home.html')
     else:
-        return redirect(url_for('authentification'))
+        return redirect(url_for('login_form'))
 
 
 
