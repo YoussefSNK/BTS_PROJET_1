@@ -67,7 +67,7 @@ def register_user():
     return redirect('/')
 
 @app.route('/sign_in', methods=['GET', 'POST'])
-def authentification():
+def login_form():
     if request.method == 'POST':
         login = request.form['login']
         password = request.form['password']

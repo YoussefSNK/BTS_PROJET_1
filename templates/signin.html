@@ -1,27 +1,64 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/forms.css') }}">
     <title>Authentification</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        #starfield {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            background: radial-gradient(circle at center, rgba(0, 0, 30, 0.8), black);
+        }
+        html, body {
+            min-height: 100%;
+            height: auto;
+            overflow-y: auto !important;
+        }
+        .content-wrapper {
+            min-height: 100vh;
+        }
+    </style>
 </head>
-<body>
-
-
-    <form action="{{ url_for('authentification') }}" method="post">
-        <h2>Authentification</h2>
-        {% if error %}
-            <p style="color: red;">Identifiant ou mot de passe incorrect.</p>
-        {% endif %}
-        <label for="login">Identifiant:</label><br>
-        <input type="login" id="login" name="login"><br>
-        <label for="password">Mot de passe:</label><br>
-        <input type="password" id="password" name="password"><br><br>
-        <input type="submit" value="Se connecter">
-    </form>
-    <form action="{{ url_for('register_form') }}">
-        <input type="submit" value="S'inscrire" />
-    </form>
+<body class="bg-black text-white min-h-screen relative overflow-hidden">
+    <canvas id="starfield"></canvas>
+    <div class="content-wrapper flex flex-col justify-center items-center py-12">
+        <div class="bg-black/40 border border-indigo-500 shadow-lg rounded-xl p-8 backdrop-blur-lg max-w-md w-full">
+            <h2 class="text-3xl font-bold text-center mb-6">Authentification</h2>
+            {% if error %}
+                <p class="text-red-500 text-center mb-4">Identifiant ou mot de passe incorrect.</p>
+            {% endif %}
+            <form action="{{ url_for('login_form') }}" method="post" class="space-y-4">
+                <div>
+                    <label for="login" class="block text-lg font-medium">Identifiant :</label>
+                    <input type="text" id="login" name="login" required
+                           class="w-full px-4 py-2 mt-1 bg-gray-800 border border-gray-600 rounded-md focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label for="password" class="block text-lg font-medium">Mot de passe :</label>
+                    <input type="password" id="password" name="password" required
+                           class="w-full px-4 py-2 mt-1 bg-gray-800 border border-gray-600 rounded-md focus:outline-none focus:border-indigo-500">
+                </div>
+                <div class="flex justify-center">
+                    <button type="submit"
+                            class="px-6 py-2 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition text-white font-semibold">
+                        Se connecter
+                    </button>
+                </div>
+            </form>
+            <div class="flex justify-center mt-6">
+                <a href="{{ url_for('register_form') }}" class="text-blue-400 hover:underline">
+                    S'inscrire
+                </a>
+            </div>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='script/stars.js') }}"></script>
 </body>
 </html>
