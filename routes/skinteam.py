@@ -154,14 +154,14 @@ def user_skins(user_id):
 def team_combinations():
     user_ids = []
     valid_teams = []
+    conn = get_db_connection()
+    users = conn.execute("SELECT id, login FROM user").fetchall()
     
     if request.method == "POST":
         user_ids = [request.form.get(f'user{i}') for i in range(1, 6)]
         user_ids = [int(uid) for uid in user_ids if uid]
         
         if len(user_ids) == 5:
-            conn = get_db_connection()
-            
             user_skins = {}
             for user_id in user_ids:
                 skins = conn.execute("""
@@ -176,7 +176,6 @@ def team_combinations():
                 """, (user_id,)).fetchall()
                 user_skins[user_id] = [dict(skin) | {"owner": user_id} for skin in skins]  # Convertir en dict + ajouter l'owner
             
-            conn.close()
             
             all_skins = [user_skins[uid] for uid in user_ids]
             possible_teams = product(*all_skins)
@@ -194,5 +193,6 @@ def team_combinations():
                         "SUPP": roles.get(5),
                     }
                     valid_teams.append(structured_team)
+    conn.close()
     
-    return render_template("skinteam/team_combinations.html", user_ids=user_ids, valid_teams=valid_teams)
+    return render_template("skinteam/team_combinations.html", user_ids=user_ids, valid_teams=valid_teams, users=users)
