@@ -153,7 +153,7 @@ def user_skins(user_id):
 @skinteam_bp.route('/team_combinations', methods=["GET", "POST"])
 def team_combinations():
     user_ids = []
-    valid_teams = []
+    grouped_teams = {}
     conn = get_db_connection()
     users = conn.execute("SELECT id, login FROM user").fetchall()
     
@@ -165,7 +165,9 @@ def team_combinations():
             user_skins = {}
             for user_id in user_ids:
                 skins = conn.execute("""
-                    SELECT skin.id, skin.nom, skin.image_url, skin.champion_id, theme.id as theme_id, role.id as role_id, role.nom as role_name
+                    SELECT skin.id, skin.nom, skin.image_url, skin.champion_id, 
+                           theme.id as theme_id, theme.nom as theme_name, 
+                           role.id as role_id, role.nom as role_name
                     FROM utilisateur_skin
                     JOIN skin ON utilisateur_skin.skin_id = skin.id
                     JOIN skin_theme ON skin.id = skin_theme.skin_id
@@ -174,9 +176,9 @@ def team_combinations():
                     JOIN role ON champion_role.role_id = role.id
                     WHERE utilisateur_skin.utilisateur_id = ?
                 """, (user_id,)).fetchall()
-                user_skins[user_id] = [dict(skin) | {"owner": user_id} for skin in skins]  # Convertir en dict + ajouter l'owner
-            
-            
+                
+                user_skins[user_id] = [dict(skin) | {"owner": user_id} for skin in skins]  
+
             all_skins = [user_skins[uid] for uid in user_ids]
             possible_teams = product(*all_skins)
             
@@ -184,7 +186,10 @@ def team_combinations():
                 themes = {skin['theme_id'] for skin in team}
                 roles = {skin['role_id']: skin for skin in team}
 
-                if len(themes) == 1 and len(roles) == 5:  # 1 seul thème et 5 rôles différents
+                if len(themes) == 1 and len(roles) == 5:  
+                    theme_id = next(iter(themes))  
+                    theme_name = next(skin['theme_name'] for skin in team)
+                    
                     structured_team = {
                         "TOP": roles.get(1),
                         "JUNGLE": roles.get(2),
@@ -192,7 +197,12 @@ def team_combinations():
                         "ADC": roles.get(4),
                         "SUPP": roles.get(5),
                     }
-                    valid_teams.append(structured_team)
+                    
+                    if theme_id not in grouped_teams:
+                        grouped_teams[theme_id] = {"theme_name": theme_name, "teams": []}
+                    
+                    grouped_teams[theme_id]["teams"].append(structured_team)
+
     conn.close()
     
-    return render_template("skinteam/team_combinations.html", user_ids=user_ids, valid_teams=valid_teams, users=users)
+    return render_template("skinteam/team_combinations.html", user_ids=user_ids, grouped_teams=grouped_teams, users=users)
