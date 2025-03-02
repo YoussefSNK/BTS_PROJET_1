@@ -158,6 +158,36 @@ def user_skins(user_id):
         
         return render_template('skinteam/user_skins.html', user_id=user_id, owned_skins=owned_skins, all_skins=all_skins)
 
+@skinteam_bp.route('/user/<int:user_id>/skins/upload', methods=['POST'])
+def upload_user_skins(user_id):
+    file = request.files.get('skins_file')
+    if not file:
+        flash("Aucun fichier fourni", "error")
+        return redirect(url_for('skinteam_bp.user_skins', user_id=user_id))
+    
+    try:
+        json_data = json.load(file)
+    except Exception as e:
+        flash("Erreur lors du traitement du fichier JSON", "error")
+        return redirect(url_for('skinteam_bp.user_skins', user_id=user_id))
+    
+    conn = get_db_connection()
+    # Supprimer les associations existantes pour l'utilisateur
+    conn.execute('DELETE FROM utilisateur_skin WHERE utilisateur_id = ?', (user_id,))
+    
+    # Parcourir la liste JSON et ajouter chaque skin si "owned" est True
+    for skin in json_data:
+        if skin.get('ownership', {}).get('owned', False):
+            skin_id = skin.get('id')
+            cursor = conn.execute('SELECT id FROM skin WHERE id = ?', (skin_id,))
+            if cursor.fetchone():
+                conn.execute('INSERT INTO utilisateur_skin (utilisateur_id, skin_id) VALUES (?, ?)', (user_id, skin_id))
+            else:
+                print(f"Skin with id {skin_id} not found in database.")
+    
+    conn.commit()
+    conn.close()
+    return redirect(url_for('skinteam_bp.user_skins', user_id=user_id))
 
 @skinteam_bp.route('/team_combinations', methods=["GET", "POST"])
 def team_combinations():
