@@ -48,7 +48,6 @@
                             <th class="px-4 py-2 border">Image</th>
                             <th class="px-4 py-2 border">Nom</th>
                             <th class="px-4 py-2 border">Rôles</th>
-                            <th class="px-4 py-2 border">Modifier</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-700">
@@ -60,82 +59,63 @@
                             <td class="px-4 py-2 border text-center">{{ champion.nom }}</td>
                             <td class="px-4 py-2 border text-center">
                                 <div class="flex justify-center space-x-2">
-                                    {% for role in champion_roles[champion.id] %}
-                                        <img src="{{ role.image_url }}" title="{{ role.nom }}" alt="{{ role.nom }}" class="w-8 h-8">
+                                    {% for role in roles %}
+                                        {% set assigned = role.id in champion_roles[champion.id] | map(attribute='id') | list %}
+                                        <img src="{{ role.image_url }}"
+                                             data-champion-id="{{ champion.id }}"
+                                             data-role-id="{{ role.id }}"
+                                             title="{{ role.nom }}"
+                                             alt="{{ role.nom }}"
+                                             class="role-icon w-8 h-8 cursor-pointer transition duration-200 ease-in-out transform hover:scale-110"
+                                             style="filter: {{ 'none' if assigned else 'grayscale(100%)' }};">
                                     {% endfor %}
                                 </div>
-                            </td>
-                            <td class="px-4 py-2 border text-center">
-                                <form action="{{ url_for('skinteam_bp.update_champion_roles', champion_id=champion.id) }}" method="POST" class="space-y-2">
-                                    <div class="flex flex-wrap justify-center gap-2">
-                                        {% for role in roles %}
-                                            <label class="inline-flex items-center space-x-1">
-                                                <input type="checkbox" name="roles" value="{{ role.id }}"
-                                                    {% if role.id in champion_roles[champion.id] | map(attribute='id') | list %} checked {% endif %}
-                                                    class="form-checkbox h-4 w-4 text-blue-600">
-                                                <span class="text-sm">{{ role.nom }}</span>
-                                            </label>
-                                        {% endfor %}
-                                    </div>
-                                    <button type="submit" class="mt-2 px-4 py-2 bg-blue-600 rounded hover:bg-blue-700 transition text-white">
-                                        Mettre à jour
-                                    </button>
-                                </form>
                             </td>
                         </tr>
                         {% endfor %}
                     </tbody>
-                    
                 </table>
             </div>
         </div>
     </div>
-
-    <!-- Script du starfield -->
+    
     <script>
-        const canvas = document.getElementById('starfield');
-        const ctx = canvas.getContext('2d');
-        let stars = [];
-        const numStars = 200;
-
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = document.documentElement.scrollHeight;
-        }
-
-        function initStars() {
-            resizeCanvas();
-            stars = [];
-            for (let i = 0; i < numStars; i++) {
-                stars.push({
-                    x: Math.random() * canvas.width,
-                    y: Math.random() * canvas.height,
-                    size: Math.random() * 2,
-                    speed: Math.random() * 0.5 + 0.2
+    document.addEventListener('DOMContentLoaded', function () {
+        const roleIcons = document.querySelectorAll('.role-icon');
+        roleIcons.forEach(function(icon) {
+            icon.addEventListener('click', function() {
+                const championId = this.dataset.championId;
+                const roleId = this.dataset.roleId;
+                // Désactiver temporairement l'icône pour éviter les doubles clics
+                this.style.pointerEvents = 'none';
+                
+                fetch(`/champions/${championId}/toggle_role/${roleId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        this.style.filter = (data.action === 'added') ? 'none' : 'grayscale(100%)';
+                    } else {
+                        alert('Une erreur est survenue lors de la mise à jour.');
+                    }
+                    this.style.pointerEvents = 'auto';
+                })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                    alert('Une erreur est survenue lors de la mise à jour.');
+                    this.style.pointerEvents = 'auto';
                 });
-            }
-        }
-
-        function animateStars() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            for (let star of stars) {
-                star.y += star.speed;
-                if (star.y > canvas.height) {
-                    star.y = 0;
-                    star.x = Math.random() * canvas.width;
-                }
-                ctx.fillStyle = "white";
-                ctx.beginPath();
-                ctx.arc(star.x, star.y, star.size, 0, 2 * Math.PI);
-                ctx.fill();
-            }
-            requestAnimationFrame(animateStars);
-        }
-
-        window.addEventListener('resize', resizeCanvas);
-        window.addEventListener('scroll', resizeCanvas);
-        initStars();
-        animateStars();
+            });
+        });
+    });
     </script>
+
+    <script src="{{ url_for('static', filename='script/stars.js') }}"></script>
+
 </body>
 </html>

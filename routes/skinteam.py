@@ -18,7 +18,6 @@ def list_champions():
     conn = get_db_connection()
     champions = conn.execute("SELECT * FROM champion").fetchall()
 
-    # Récupérer les rôles associés à chaque champion
     champion_roles = {}
     for champion in champions:
         roles = conn.execute("""
@@ -33,21 +32,31 @@ def list_champions():
     conn.close()
     return render_template("skinteam/champions.html", champions=champions, champion_roles=champion_roles, roles=roles)
 
-
-@skinteam_bp.route('/champions/<int:champion_id>/update_roles', methods=["POST"])
-def update_champion_roles(champion_id):
+@skinteam_bp.route('/champions/<int:champion_id>/toggle_role/<int:role_id>', methods=['POST'])
+def toggle_champion_role(champion_id, role_id):
     conn = get_db_connection()
+    existing = conn.execute(
+        "SELECT * FROM champion_role WHERE champion_id = ? AND role_id = ?",
+        (champion_id, role_id)
+    ).fetchone()
     
-    selected_roles = request.form.getlist("roles")
-    conn.execute("DELETE FROM champion_role WHERE champion_id = ?", (champion_id,))
-
-    for role_id in selected_roles:
-        conn.execute("INSERT INTO champion_role (champion_id, role_id) VALUES (?, ?)", (champion_id, role_id))
-
+    if existing:
+        conn.execute(
+            "DELETE FROM champion_role WHERE champion_id = ? AND role_id = ?",
+            (champion_id, role_id)
+        )
+        action = 'removed'
+    else:
+        conn.execute(
+            "INSERT INTO champion_role (champion_id, role_id) VALUES (?, ?)",
+            (champion_id, role_id)
+        )
+        action = 'added'
+    
     conn.commit()
     conn.close()
+    return jsonify({'status': 'success', 'action': action})
 
-    return redirect(url_for("skinteam_bp.list_champions"))
 
 
 @skinteam_bp.route('/themes')
