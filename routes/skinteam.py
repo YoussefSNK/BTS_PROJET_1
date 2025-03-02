@@ -185,8 +185,9 @@ def team_combinations():
             for team in possible_teams:
                 themes = {skin['theme_id'] for skin in team}
                 roles = {skin['role_id']: skin for skin in team}
+                champions = {skin['champion_id'] for skin in team}
 
-                if len(themes) == 1 and len(roles) == 5:  
+                if len(themes) == 1 and len(roles) == 5 and len(champions) == 5:
                     theme_id = next(iter(themes))  
                     theme_name = next(skin['theme_name'] for skin in team)
                     
