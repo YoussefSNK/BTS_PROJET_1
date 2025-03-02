@@ -75,7 +75,7 @@
                                                 <img src="{{ skin.image_url }}" alt="{{ skin.nom }}"
                                                      class="w-20 h-20 object-cover rounded-lg mx-auto mb-2">
                                                 <p class="text-sm">{{ skin.nom }}</p>
-                                                <p class="text-xs text-gray-400">Joueur: {{ skin.owner }}</p>
+                                                <p class="text-xs text-gray-400">{{ users | selectattr('id', 'equalto', skin.owner) | map(attribute='login') | first }}</p>
                                             {% else %}
                                                 <p class="text-gray-500">Aucun skin</p>
                                             {% endif %}
