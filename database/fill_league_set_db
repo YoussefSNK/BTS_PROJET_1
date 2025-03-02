@@ -1,0 +1,79 @@
+import csv
+import json
+import sqlite3
+
+# Configuration
+CSV_FILE = "skin_sets.csv"         # Fichier CSV avec les sets de skins (colonnes : Set Name, Skins)
+DB_FILE = "database.db"            # Base SQLite
+EN_JSON_FILE = "champions_en.json" # JSON de l'API en anglais
+FR_JSON_FILE = "champions_fr.json" # JSON de l'API en français
+DEFAULT_THEME_IMAGE = "https://placehold.co/600x400/EEE/31343C"  # Image par défaut pour le thème
+
+# --- Étape 1 : Charger les JSON et construire le mapping ---
+with open(EN_JSON_FILE, encoding="utf-8") as f:
+    data_en = json.load(f)
+
+with open(FR_JSON_FILE, encoding="utf-8") as f:
+    data_fr = json.load(f)
+
+# Construction d'un mapping : nom anglais -> nom français
+skin_name_mapping = {}
+
+# Pour chaque champion dans le JSON anglais, on récupère ses skins,
+# et on retrouve le skin correspondant dans le JSON français via l'id.
+for champion, champ_data_en in data_en["data"].items():
+    champ_data_fr = data_fr["data"].get(champion)
+    if not champ_data_fr:
+        continue  # Si le champion n'existe pas dans le JSON français, on passe au suivant
+
+    # Création d'un dictionnaire skin_id -> skin_name pour chaque version
+    skins_en = {skin["id"]: skin["name"] for skin in champ_data_en.get("skins", [])}
+    skins_fr = {skin["id"]: skin["name"] for skin in champ_data_fr.get("skins", [])}
+
+    # Pour chaque skin anglais, on cherche le skin français correspondant (via l'id)
+    for skin_id, eng_name in skins_en.items():
+        fr_name = skins_fr.get(skin_id, eng_name)  # Si absent, on garde le nom anglais
+        skin_name_mapping[eng_name] = fr_name
+
+# --- Étape 2 : Connexion à la base de données ---
+conn = sqlite3.connect(DB_FILE)
+cursor = conn.cursor()
+
+# --- Étape 3 : Traitement du CSV et insertion dans la base ---
+with open(CSV_FILE, newline='', encoding='utf-8') as csvfile:
+    # Ici, le séparateur est la virgule
+    reader = csv.DictReader(csvfile, delimiter=",")
+    for row in reader:
+        theme_name = row["Set Name"].strip()
+        # On divise la colonne Skins par le séparateur ';'
+        skins_list = row["Skins"].split(';')
+        skins_list = [skin.strip() for skin in skins_list if skin.strip()]
+
+        # Insertion du thème dans la table theme (INSERT OR IGNORE pour éviter les doublons)
+        cursor.execute(
+            "INSERT OR IGNORE INTO theme (nom, image_url) VALUES (?, ?)",
+            (theme_name, DEFAULT_THEME_IMAGE)
+        )
+        # Récupération de l'ID du thème
+        cursor.execute("SELECT id FROM theme WHERE nom = ?", (theme_name,))
+        theme_id = cursor.fetchone()[0]
+
+        # Pour chaque skin listé, on convertit le nom anglais en nom français
+        for eng_skin_name in skins_list:
+            fr_skin_name = skin_name_mapping.get(eng_skin_name, eng_skin_name)
+            cursor.execute("SELECT id FROM skin WHERE nom = ?", (fr_skin_name,))
+            result = cursor.fetchone()
+            if result:
+                skin_id = result[0]
+                cursor.execute(
+                    "INSERT OR IGNORE INTO skin_theme (skin_id, theme_id) VALUES (?, ?)",
+                    (skin_id, theme_id)
+                )
+            else:
+                print(f"Attention : Le skin '{eng_skin_name}' (converti en '{fr_skin_name}') n'a pas été trouvé dans la base.")
+
+# Validation des modifications et fermeture de la connexion
+conn.commit()
+conn.close()
+
+print("Insertion terminée.")
