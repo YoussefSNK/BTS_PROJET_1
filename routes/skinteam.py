@@ -181,28 +181,46 @@ def team_combinations():
 
             all_skins = [user_skins[uid] for uid in user_ids]
             possible_teams = product(*all_skins)
+
+            # Structure d'agrégation :
+            # {theme_id: {"theme_name": <nom>, "teams": {composition_key: aggregated_team}}}
+            aggregated = {}
+            roles_order = [("TOP", 1), ("JUNGLE", 2), ("MID", 3), ("ADC", 4), ("SUPP", 5)]
             
             for team in possible_teams:
                 themes = {skin['theme_id'] for skin in team}
-                roles = {skin['role_id']: skin for skin in team}
+                roles_map = {skin['role_id']: skin for skin in team}
                 champions = {skin['champion_id'] for skin in team}
 
-                if len(themes) == 1 and len(roles) == 5 and len(champions) == 5:
-                    theme_id = next(iter(themes))  
-                    theme_name = next(skin['theme_name'] for skin in team)
+                if len(themes) == 1 and len(roles_map) == 5 and len(champions) == 5:
+                    structured_team = {}
+                    for role_name, role_id in roles_order:
+                        structured_team[role_name] = roles_map.get(role_id)
+
+                    composition_key = tuple(structured_team[role_name]['champion_id'] for role_name, _ in roles_order)
                     
-                    structured_team = {
-                        "TOP": roles.get(1),
-                        "JUNGLE": roles.get(2),
-                        "MID": roles.get(3),
-                        "ADC": roles.get(4),
-                        "SUPP": roles.get(5),
-                    }
+                    theme_id = next(iter(themes))
+                    theme_name = structured_team["TOP"]["theme_name"]
                     
-                    if theme_id not in grouped_teams:
-                        grouped_teams[theme_id] = {"theme_name": theme_name, "teams": []}
+                    if theme_id not in aggregated:
+                        aggregated[theme_id] = {"theme_name": theme_name, "teams": {}}
                     
-                    grouped_teams[theme_id]["teams"].append(structured_team)
+                    if composition_key not in aggregated[theme_id]["teams"]:
+                        aggregated[theme_id]["teams"][composition_key] = {
+                            role_name: [structured_team[role_name]] for role_name, _ in roles_order
+                        }
+                    else:
+                        for role_name, _ in roles_order:
+                            skin = structured_team[role_name]
+                            if skin["id"] not in [s["id"] for s in aggregated[theme_id]["teams"][composition_key][role_name]]:
+                                aggregated[theme_id]["teams"][composition_key][role_name].append(skin)
+            
+            final_grouped_teams = {}
+            for theme_id, data in aggregated.items():
+                teams_list = list(data["teams"].values())
+                final_grouped_teams[theme_id] = {"theme_name": data["theme_name"], "teams": teams_list}
+            
+            grouped_teams = final_grouped_teams
 
     conn.close()
     

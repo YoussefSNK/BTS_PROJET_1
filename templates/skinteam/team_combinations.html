@@ -68,14 +68,23 @@
                             <div class="bg-black/50 p-6 rounded-xl shadow-lg border border-gray-700 mb-6">
                                 <h3 class="text-2xl font-semibold text-indigo-300 mb-4">Équipe {{ loop.index }}</h3>
                                 <div class="grid grid-cols-5 gap-4 text-center">
-                                    {% for role, skin in team.items() %}
+                                    {% for role, skins in team.items() %}
                                         <div class="p-4 border border-indigo-500 rounded-lg bg-black/40">
                                             <h3 class="text-lg font-semibold text-blue-400">{{ role }}</h3>
-                                            {% if skin %}
-                                                <img src="{{ skin.image_url }}" alt="{{ skin.nom }}"
-                                                     class="w-20 h-20 object-cover rounded-lg mx-auto mb-2">
-                                                <p class="text-sm">{{ skin.nom }}</p>
-                                                <p class="text-xs text-gray-400">{{ users | selectattr('id', 'equalto', skin.owner) | map(attribute='login') | first }}</p>
+                                            {% if skins %}
+                                                <div>
+                                                    {% for skin in skins %}
+                                                        <img src="{{ skin.image_url }}" alt="{{ skin.nom }}"
+                                                             class="w-16 h-16 object-cover rounded-lg inline-block mr-1">
+                                                    {% endfor %}
+                                                </div>
+                                                <p class="text-sm">
+                                                    {% set skin_names = skins | map(attribute='nom') | list %}
+                                                    {{ skin_names | join(" / ") }}
+                                                </p>
+                                                <p class="text-xs text-gray-400">
+                                                    {{ users | selectattr('id', 'equalto', skins[0].owner) | map(attribute='login') | first }}
+                                                </p>
                                             {% else %}
                                                 <p class="text-gray-500">Aucun skin</p>
                                             {% endif %}
@@ -87,9 +96,9 @@
                     </div>
                 {% endfor %}
             </div>
-        {% else %}
-            <p class="text-gray-500 text-center mt-6">Aucune équipe trouvée avec ces joueurs.</p>
-        {% endif %}
+            {% else %}
+                <p class="text-gray-500 text-center mt-6">Aucune équipe trouvée avec ces joueurs.</p>
+            {% endif %}
         </div>
     </div>
 </body>
