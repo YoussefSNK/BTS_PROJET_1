@@ -1,4 +1,5 @@
-from flask import Blueprint, render_template, request, redirect, url_for
+import json
+from flask import Blueprint, jsonify, render_template, request, redirect, url_for, flash
 import sqlite3
 from itertools import product, combinations
 
@@ -216,27 +217,46 @@ def team_combinations():
                 
                 user_skins[user_id] = [dict(skin) | {"owner": user_id} for skin in skins]  
 
-            all_skins = [user_skins[uid] for uid in user_ids]
-            possible_teams = product(*all_skins)
-
-            # Structure d'agrégation :
-            # {theme_id: {"theme_name": <nom>, "teams": {composition_key: aggregated_team}}}
+            theme_user_skins = {}
+            for user_id, skins in user_skins.items():
+                for skin in skins:
+                    theme_id = skin['theme_id']
+                    if theme_id not in theme_user_skins:
+                        theme_user_skins[theme_id] = {}
+                    if user_id not in theme_user_skins[theme_id]:
+                        theme_user_skins[theme_id][user_id] = []
+                    theme_user_skins[theme_id][user_id].append(skin)
+            
+            valid_themes = { theme_id: skins_by_user 
+                             for theme_id, skins_by_user in theme_user_skins.items()
+                             if all(user_id in skins_by_user for user_id in user_ids) }
             aggregated = {}
             roles_order = [("TOP", 1), ("JUNGLE", 2), ("MID", 3), ("ADC", 4), ("SUPP", 5)]
+            for theme_id, skins_by_user in valid_themes.items():
+                skins_lists = [skins_by_user[user_id] for user_id in user_ids]
+                possible_teams = product(*skins_lists)
             
-            for team in possible_teams:
-                themes = {skin['theme_id'] for skin in team}
-                roles_map = {skin['role_id']: skin for skin in team}
-                champions = {skin['champion_id'] for skin in team}
-
-                if len(themes) == 1 and len(roles_map) == 5 and len(champions) == 5:
+                for team in possible_teams:
+                    champions = set()
+                    roles_map = {}
+                    valid_team = True
+                    for skin in team:
+                        role_id = skin['role_id']
+                        if role_id in roles_map:
+                            valid_team = False
+                            break
+                        roles_map[role_id] = skin
+                        champions.add(skin['champion_id'])
+                    
+                    if not valid_team or len(champions) != 5:
+                        continue
+                    
                     structured_team = {}
                     for role_name, role_id in roles_order:
                         structured_team[role_name] = roles_map.get(role_id)
 
                     composition_key = tuple(structured_team[role_name]['champion_id'] for role_name, _ in roles_order)
                     
-                    theme_id = next(iter(themes))
                     theme_name = structured_team["TOP"]["theme_name"]
                     
                     if theme_id not in aggregated:
