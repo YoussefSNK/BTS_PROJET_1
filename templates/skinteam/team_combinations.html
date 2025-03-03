@@ -57,9 +57,22 @@
             </form>
 
             {% if grouped_teams %}
+
+            <div class="mb-8 bg-black/60 p-8 rounded-xl shadow-xl border border-purple-500">
+                <h2 class="text-2xl font-bold text-purple-400 mb-4">Sommaire des thèmes</h2>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {% for theme in grouped_teams.values() %}
+                        <a href="#{{ theme.theme_name | replace(' ', '-') }}"
+                           class="block px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-blue-400 text-center transition transform hover:scale-105">
+                            {{ theme.theme_name }}
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+
             <div class="space-y-12">
                 {% for theme in grouped_teams.values() %}
-                    <div class="bg-black/60 p-8 rounded-xl shadow-xl border border-purple-500">
+                    <div id="{{ theme.theme_name | replace(' ', '-') }}" class="bg-black/60 p-8 rounded-xl shadow-xl border border-purple-500">
                         <h2 class="text-3xl font-bold text-purple-400 mb-6">
                             {{ theme.theme_name }}
                         </h2>
