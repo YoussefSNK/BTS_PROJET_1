@@ -130,7 +130,7 @@ def assign_skins(theme_id):
 def user_skins(user_id):
     conn = get_db_connection()
 
-    if request.method == 'POST':
+    if request.method == 'POST' and 'skins' in request.form:
         selected_skins = request.form.getlist('skins')
 
         # Supprimer les anciennes associations
@@ -144,19 +144,17 @@ def user_skins(user_id):
         conn.close()
         return redirect(url_for('skinteam_bp.user_skins', user_id=user_id))
 
-    else:
-        # Récupérer les skins possédés par l'utilisateur
-        owned_skins = conn.execute('''
-            SELECT skin.* FROM skin
-            JOIN utilisateur_skin ON skin.id = utilisateur_skin.skin_id
-            WHERE utilisateur_skin.utilisateur_id = ?
-        ''', (user_id,)).fetchall()
 
-        # Récupérer tous les skins disponibles
-        all_skins = conn.execute('SELECT * FROM skin').fetchall()
-        conn.close()
-        
-        return render_template('skinteam/user_skins.html', user_id=user_id, owned_skins=owned_skins, all_skins=all_skins)
+    # Méthode GET : récupération des skins de l'utilisateur et de la liste complète
+    owned_skins = conn.execute('''
+        SELECT skin.* FROM skin
+        JOIN utilisateur_skin ON skin.id = utilisateur_skin.skin_id
+        WHERE utilisateur_skin.utilisateur_id = ?
+    ''', (user_id,)).fetchall()
+    all_skins = conn.execute('SELECT * FROM skin').fetchall()
+    conn.close()
+    
+    return render_template('skinteam/user_skins.html', user_id=user_id, owned_skins=owned_skins, all_skins=all_skins)
 
 @skinteam_bp.route('/user/<int:user_id>/skins/upload', methods=['POST'])
 def upload_user_skins(user_id):
