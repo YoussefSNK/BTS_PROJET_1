@@ -80,7 +80,24 @@
 
         /* Effet lumineux au survol */
         .btn {
-            @apply flex items-center justify-center bg-blue-600 text-white py-3 px-6 rounded-lg shadow-lg text-lg font-medium transition duration-300 hover:bg-blue-700 hover:shadow-glow;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background-color: #2563eb; /* bg-blue-600 */
+                color: #ffffff; /* text-white */
+                padding-top: 0.75rem; /* py-3 */
+                padding-bottom: 0.75rem; /* py-3 */
+                padding-left: 1.5rem; /* px-6 */
+                padding-right: 1.5rem; /* px-6 */
+                border-radius: 0.5rem; /* rounded-lg */
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
+                font-size: 1.125rem; /* text-lg */
+                font-weight: 500; /* font-medium */
+                transition: background-color 0.3s, box-shadow 0.3s; /* transition duration-300 */
+            }
+            .btn:hover {
+                background-color: #1d4ed8; /* hover:bg-blue-700 */
+                box-shadow: 0 0 20px rgba(59, 130, 246, 0.8); /* hover:shadow-glow */
             gap: 10px;
         }
 
