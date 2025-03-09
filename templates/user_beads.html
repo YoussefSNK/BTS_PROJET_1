@@ -22,6 +22,30 @@
     .btn-hover:hover {
       transform: scale(1.05);
     }
+
+    .planet {
+    /* Le centre est un mélange de 60% de la couleur de base et 40% de blanc, 
+       et les bords reprennent la couleur de base. */
+      background: radial-gradient(
+        circle at 30% 30%, 
+        color-mix(in srgb, var(--base-color) 60%, white 40%) 20%, 
+        var(--base-color) 80%
+      );
+      /* Animation pour faire bouger le point lumineux */
+      animation: glint 3s ease-in-out infinite;
+    }
+  
+    @keyframes glint {
+      0% {
+        background-position: 30% 30%;
+      }
+      50% {
+        background-position: 70% 70%;
+      }
+      100% {
+        background-position: 30% 30%;
+      }
+    }
   </style>
 </head>
 <body class="bg-gradient-to-br from-gray-50 to-gray-200 min-h-screen">
@@ -39,7 +63,7 @@
           <div class="fade-in card-hover bg-white/80 backdrop-blur-lg rounded-xl shadow-xl p-6 transform transition duration-300 hover:-translate-y-1 hover:shadow-2xl">
             <div class="flex flex-col items-center">
               <!-- Cercle coloré avec bordure et ombre pour accentuer la teinte -->
-              <div class="w-24 h-24 rounded-full border-4 border-white shadow-lg" style="background-color: {{ color[1] }};"></div>
+              <div class="w-24 h-24 rounded-full border-4 border-white shadow-lg planet" style="--base-color: {{ color[1] }};"></div>
               <div class="mt-4 text-center">
                 <p class="text-xl font-bold text-gray-900">{{ color[3] }} / {{ color[2] }}</p>
                 <p class="text-sm text-gray-600">{{ color[1] }}</p>
