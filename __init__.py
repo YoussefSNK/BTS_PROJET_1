@@ -154,6 +154,29 @@ def ModelList():
 
 
 
+
+def detect_upscale_factor(image):
+    width, height = image.size
+    for factor in range(2, min(width, height) + 1):
+        is_valid = True
+        for y in range(0, height, factor):
+            for x in range(0, width, factor):
+                ref_color = image.getpixel((x, y))
+                for j in range(factor):
+                    for i in range(factor):
+                        if x + i < width and y + j < height:
+                            if image.getpixel((x + i, y + j)) != ref_color:
+                                is_valid = False
+                                break
+                    if not is_valid:
+                        break
+                if not is_valid:
+                    break
+            if not is_valid:
+                break
+        if is_valid:
+            return factor
+    return 1
 def downscale_image(image, factor):
     width, height = image.size
     new_size = (width // factor, height // factor)
@@ -167,23 +190,15 @@ def get_color_histogram(image):
 
 def detect_colors(image_path):
     img = Image.open(image_path).convert("RGB")
-    prev_histogram = None
+    upscale_factor = detect_upscale_factor(img)
 
-    for factor in range(2, min(img.size) // 2):
-        downscaled_image = downscale_image(img, factor)
-        current_histogram = get_color_histogram(downscaled_image)
-
-        if prev_histogram and current_histogram == prev_histogram:
-            break
-        
-        prev_histogram = current_histogram
-
+    print(f"Facteur d'upscale détecté : {upscale_factor}")
+    original_img = downscale_image(img, upscale_factor)
+    current_histogram = get_color_histogram(original_img)
     hex_color_counts = {
         "#{:02x}{:02x}{:02x}".format(r, g, b): count
         for (r, g, b), count in current_histogram.items()
     }
-
-    print("Detected colors:", hex_color_counts)  # Debugging output
     return hex_color_counts
 
 @app.route('/add_image', methods=['GET', 'POST'])
