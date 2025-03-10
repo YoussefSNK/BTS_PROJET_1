@@ -1,3 +1,4 @@
 static/images
 database.db
 __pycache__
+venv/
