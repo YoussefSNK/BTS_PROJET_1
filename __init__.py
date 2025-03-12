@@ -8,6 +8,7 @@ from PIL import Image
 from collections import Counter
 
 from datetime import datetime
+import math
 
 from routes.posters import poster_bp
 from routes.skinteam import skinteam_bp
@@ -167,6 +168,62 @@ def detect_colors(image_path):
     }
     return hex_color_counts
 
+def decomposition_facteurs_premiers(n):
+    """Retourne la décomposition en facteurs premiers d'un nombre n."""
+    facteurs = []
+    diviseur = 2
+    while diviseur * diviseur <= n:
+        while n % diviseur == 0:
+            facteurs.append(diviseur)
+            n //= diviseur
+        diviseur += 1
+    if n > 1:
+        facteurs.append(n)
+    return facteurs
+
+def remove_common_elements(d: dict) -> dict:
+    """
+    Pour le dictionnaire d, la fonction parcourt la première liste associée à la première clé.
+    Pour chaque entier n de cette liste, si n est présent dans toutes les autres listes,
+    alors on retire de chaque liste le nombre minimal d'occurrences de n parmi toutes.
+    
+    Exemple :
+      'H70': [2, 2, 3, 3, 3, 3, 3, 5, 7],
+      'H106': [2, 2, 2, 3, 3, 3, 3, 23],
+      'H77': [2, 2, 2, 3, 3, 3, 3, 7, 23]
+    
+    devient
+    
+      'H70': [3, 5, 7],
+      'H106': [2, 23],
+      'H77': [2, 7, 23]
+    """
+    # Récupérer la liste des clés du dictionnaire
+    keys = list(d.keys())
+    if not keys:
+        return d  # dictionnaire vide
+    
+    # Clé de référence : la première
+    base_key = keys[0]
+    
+    # Pour chaque valeur unique de la première liste
+    for n in set(d[base_key]):
+        # Vérifier que n est présent dans toutes les autres listes
+        if all(n in d[k] for k in keys[1:]):
+            # Calculer le nombre minimal d'occurrences de n dans toutes les listes
+            min_occurrences = min(lst.count(n) for lst in d.values())
+            # Supprimer min_occurrences de n dans chaque liste
+            for key in keys:
+                for _ in range(min_occurrences):
+                    d[key].remove(n)
+    return d
+
+def produit_listes(dictionnaire: dict[str, list[int]]) -> dict[str, int]:
+    return {cle: math.prod(valeurs) for cle, valeurs in dictionnaire.items()}
+
+def somme_valeurs(dictionnaire: dict[str, int]) -> int:
+    return sum(dictionnaire.values())
+
 @app.route('/add_image', methods=['GET', 'POST'])
 def add_image():
     if 'authentifie' in session and session['authentifie']:
@@ -202,7 +259,14 @@ def add_image():
 
                 # Détecter les couleurs dans l'image
                 detected_colors = detect_colors(file_path)
-                # Ajouter les couleurs associées à l'image
+                dict_decomposition = {
+                    couleur: decomposition_facteurs_premiers(valeur)
+                    for couleur, valeur in detected_colors.items()
+                }
+                dict_sans_communs = remove_common_elements(dict_decomposition.copy())
+                dict_produit = produit_listes(dict_sans_communs)
+                detected_colors = dict_produit
+
                 for color in colors:
                     color_id = color[0]
                     color_hex = color[3]
