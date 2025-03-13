@@ -37,7 +37,7 @@
     <div class="relative z-10 max-w-lg w-full bg-white/20 backdrop-blur-md shadow-2xl rounded-2xl p-8 transition-all duration-300 hover:shadow-glow opacity-0 transform scale-95 animate-fade-in">
         <h1 class="text-3xl font-bold text-white text-center mb-6">Ajouter une Nouvelle Image</h1>
 
-        <form action="{{ url_for('add_image') }}" method="post" enctype="multipart/form-data" class="space-y-4">
+        <form action="{{ url_for('pearl_bp.add_image') }}" method="post" enctype="multipart/form-data" class="space-y-4">
             <!-- Drag & Drop Upload -->
             <div class="drop-zone relative border-2 border-dashed border-blue-400 rounded-lg p-6 text-center cursor-pointer transition hover:bg-blue-400/10">
                 <input type="file" name="image" id="image" accept="image/*" required class="hidden">

@@ -69,7 +69,7 @@
                 <p class="text-sm text-gray-600">{{ color[1] }}</p>
               </div>
               <!-- Formulaire individuel pour la mise à jour -->
-              <form method="post" action="{{ url_for('user_beads') }}" class="mt-6 w-full">
+              <form method="post" action="{{ url_for('pearl_bp.user_beads') }}" class="mt-6 w-full">
                 <input type="hidden" name="color_id" value="{{ color[0] }}">
                 <div class="flex items-center justify-center space-x-3">
                   <input type="number" name="quantity" value="{{ color[4] or 0 }}"
