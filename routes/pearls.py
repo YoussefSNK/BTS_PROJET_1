@@ -145,7 +145,7 @@ def add_image():
 
                 return redirect(url_for('ModelList'))
 
-        return render_template('add_model.html', colors=colors)
+        return render_template('pearl/add_model.html', colors=colors)
     else:
         return redirect('/')
 
@@ -187,7 +187,7 @@ def user_beads():
         ''', (user_id,))
         user_beads = cursor.fetchall()
         conn.close()
-        return render_template('user_beads.html', colors=user_beads)
+        return render_template('pearl/user_beads.html', colors=user_beads)
     else:
         return redirect('/')
 
@@ -258,7 +258,7 @@ def image_availability():
 
         conn.close()
 
-        return render_template('image_availability.html', image_data=image_data)
+        return render_template('pearl/image_availability.html', image_data=image_data)
     else:
         return redirect('/')
 
