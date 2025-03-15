@@ -74,7 +74,10 @@
               <div class="w-full bg-gray-200 rounded-full h-2.5">
                 <div class="bg-blue-500 h-2.5 rounded-full" style="width: {{ image[4] }}%;"></div>
               </div>
-              <p class="text-sm text-gray-600 mt-1">Progression : {{ image[4] }}%</p>
+                <div class="flex justify-between text-sm text-gray-600 mt-1">
+                <p>Progression : {{ image[4] }}%</p>
+                <p>Total : {{ image[5] }}</p>
+                </div>
             </div>
             <div class="space-y-2">
               {% for color in image[2] %}

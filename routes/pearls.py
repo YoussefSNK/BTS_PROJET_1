@@ -254,7 +254,7 @@ def image_availability():
 
             # Calcul du pourcentage de perles possédées
             completion_rate = round((total_available / total_required * 100), 1) if total_required > 0 else 0
-            image_data.append((image_path, description, colors_status, sufficient, completion_rate))
+            image_data.append((image_path, description, colors_status, sufficient, completion_rate, total_required))
 
         conn.close()
 
