@@ -254,7 +254,7 @@ def image_availability():
 
             # Calcul du pourcentage de perles possédées
             completion_rate = round((total_available / total_required * 100), 1) if total_required > 0 else 0
-            image_data.append((image_path, description, colors_status, sufficient, completion_rate, total_required))
+            image_data.append((image_path, description, colors_status, sufficient, completion_rate, total_required, image_id))
 
         conn.close()
 
@@ -262,3 +262,23 @@ def image_availability():
     else:
         return redirect('/')
 
+@pearl_bp.route('/delete_image/<int:image_id>', methods=['POST'])
+def delete_image(image_id):
+    if 'authentifie' in session and session['authentifie']:
+        user_id = session.get('user_id')
+
+        conn = sqlite3.connect('database/database.db')
+        cursor = conn.cursor()
+
+        # Vérifier que l'image appartient bien à l'utilisateur
+        cursor.execute('SELECT id FROM Images WHERE id = ? AND user_id = ?', (image_id, user_id))
+        image = cursor.fetchone()
+
+        if image:
+            # Supprimer l'image de la base de données
+            cursor.execute('DELETE FROM Images WHERE id = ?', (image_id,))
+            cursor.execute('DELETE FROM ImageColors WHERE image_id = ?', (image_id,))
+            conn.commit()
+
+        conn.close()
+    return redirect(url_for('pearl_bp.image_availability'))

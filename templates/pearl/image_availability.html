@@ -63,8 +63,12 @@
       {% if not image[3] %}
         <div class="relative bg-white rounded-xl shadow-lg overflow-hidden transform transition hover:scale-105">
           <!-- Badge indiquant l'état -->
-          <div class="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-            ❌
+          <div class="absolute top-2 left-2">
+            <form action="{{ url_for('pearl_bp.delete_image', image_id=image[6]) }}" method="POST">
+              <button type="submit" class="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full hover:bg-red-700">
+                ❌
+              </button>
+            </form>
           </div>
           <img src="{{ image[0] }}" alt="{{ image[1] }}" class="w-full h-48 object-cover">
           <div class="p-4">
