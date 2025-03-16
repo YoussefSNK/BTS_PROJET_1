@@ -35,21 +35,48 @@
       margin-bottom: 2rem;
     }
     
-    /* Styles pour le contenu dépliable */
+    /* Styles pour le contenu dépliable avec transitions */
     .collapsible-content {
-      display: none;
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease-out, opacity 0.4s ease-out, margin-top 0.3s ease-out;
+      margin-top: 0;
     }
     
     .collapsible-content.show {
-      display: block;
+      max-height: 500px; /* Valeur suffisamment grande pour contenir le contenu */
+      opacity: 1;
+      margin-top: 1rem;
     }
     
+    /* Animation du bouton */
     .toggle-btn {
+      transition: color 0.3s ease;
+    }
+    
+    .toggle-btn.expanded {
+      color: #4F46E5; /* Indigo-600 quand déplié */
+    }
+    
+    .toggle-btn svg {
       transition: transform 0.3s ease;
     }
     
     .toggle-btn.expanded svg {
       transform: rotate(180deg);
+    }
+    
+    /* Animation des couleurs */
+    .color-item {
+      transform: translateY(0);
+      opacity: 1;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+    
+    .collapsible-content:not(.show) .color-item {
+      transform: translateY(10px);
+      opacity: 0;
     }
   </style>
 </head>
@@ -287,7 +314,7 @@
         
         // Toggle button
         const toggleBtn = document.createElement('button');
-        toggleBtn.className = 'toggle-btn w-full flex items-center justify-center py-2 text-blue-600 hover:text-blue-800 focus:outline-none';
+        toggleBtn.className = 'toggle-btn w-full flex items-center justify-center py-2 text-blue-600 hover:text-blue-800 focus:outline-none mt-2';
         
         const btnText = document.createElement('span');
         btnText.className = 'mr-2';
@@ -317,12 +344,13 @@
         collapsibleContent.className = 'collapsible-content';
         
         const colorsList = document.createElement('div');
-        colorsList.className = 'space-y-2 mt-4';
+        colorsList.className = 'space-y-2';
         
         // Add colors
-        imageData.colors.forEach(colorData => {
+        imageData.colors.forEach((colorData, index) => {
           const colorItem = document.createElement('div');
-          colorItem.className = 'flex items-center justify-between';
+          colorItem.className = 'flex items-center justify-between color-item';
+          colorItem.style.transitionDelay = (index * 0.05) + 's'; // Délai progressif pour effet cascade
           
           const colorLeft = document.createElement('div');
           colorLeft.className = 'flex items-center space-x-2';
@@ -377,8 +405,19 @@
           const textSpan = this.querySelector('span');
           if (collapsibleContent.classList.contains('show')) {
             textSpan.textContent = 'Masquer les détails';
+            
+            // Dynamiquement ajuster la hauteur maximale pour une transition fluide
+            const contentHeight = colorsList.scrollHeight;
+            collapsibleContent.style.maxHeight = contentHeight + 'px';
           } else {
             textSpan.textContent = 'Voir les détails';
+            
+            // Réinitialiser la hauteur après la transition pour permettre une contraction correcte
+            setTimeout(() => {
+              if (!collapsibleContent.classList.contains('show')) {
+                collapsibleContent.style.maxHeight = '0';
+              }
+            }, 50); // Durée correspondant à la transition CSS
           }
         });
         
