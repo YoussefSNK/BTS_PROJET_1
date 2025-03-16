@@ -89,67 +89,6 @@ def deconnexion_utilisateur():
 
 
 
-@app.route('/model_list', methods=['GET', 'POST'])
-def ModelList():
-    if 'authentifie' in session and session['authentifie']:
-        user_id = session.get('user_id')
-
-        conn = sqlite3.connect('database/database.db')
-        cursor = conn.cursor()
-
-        # Récupérer les couleurs disponibles
-        cursor.execute('SELECT * FROM Colors')
-        colors = cursor.fetchall()
-
-        # Filtrage par couleurs sélectionnées
-        selected_colors = request.form.getlist('colors')
-        if selected_colors:
-            placeholders = ', '.join(['?'] * len(selected_colors))
-            query = f'''
-                SELECT i.id, i.image_path 
-                FROM Images i
-                WHERE i.user_id = ?
-                AND NOT EXISTS (
-                    SELECT 1
-                    FROM (
-                        SELECT DISTINCT c.id
-                        FROM Colors c
-                        LEFT JOIN ImageColors ic ON c.id = ic.color_id AND ic.image_id = i.id
-                        WHERE c.id NOT IN ({placeholders})
-                    ) missing_colors
-                )
-            '''
-            cursor.execute(query, [user_id] + selected_colors)
-        else:
-            # Récupérer toutes les images de l'utilisateur
-            cursor.execute('''
-                SELECT i.id, i.image_path 
-                FROM Images i 
-                WHERE i.user_id = ?
-            ''', (user_id,))
-        images = cursor.fetchall()
-
-        image_data = []
-        for image in images:
-            image_id = image[0]
-            image_path = image[1]
-            cursor.execute('''
-                SELECT ic.color_id, c.name, ic.quantity 
-                FROM ImageColors ic
-                JOIN Colors c ON ic.color_id = c.id
-                WHERE ic.image_id = ?
-            ''', (image_id,))
-            colors_quantities = cursor.fetchall()
-            image_data.append((image_id, image_path, colors_quantities))
-
-        conn.close()
-
-        return render_template('model_list.html', images=image_data, colors=colors, selected_colors=selected_colors)
-    else:
-        return redirect('/')
-
-
-
 
 
 

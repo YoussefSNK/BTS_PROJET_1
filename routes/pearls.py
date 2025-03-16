@@ -143,7 +143,7 @@ def add_image():
                 conn.commit()
                 conn.close()
 
-                return redirect(url_for('ModelList'))
+                return redirect(url_for('pearl_bp.image_availability'))
 
         return render_template('pearl/add_model.html', colors=colors)
     else:
