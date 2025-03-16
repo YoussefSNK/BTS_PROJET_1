@@ -6,7 +6,51 @@
   <title>Image Availability</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* Vous pouvez ajouter ici des personnalisations supplémentaires si besoin */
+    /* Structure de colonnes fixes */
+    .fixed-columns {
+      display: flex;
+      flex-wrap: wrap;
+      margin: 0 -1rem; /* Compensation pour les gaps */
+    }
+    
+    .column {
+      width: 100%;
+      padding: 0 1rem;
+      box-sizing: border-box;
+    }
+    
+    @media (min-width: 768px) {
+      .column {
+        width: 33.333%; /* Passage à 3 colonnes sur tablette */
+      }
+    }
+    
+    @media (min-width: 1024px) {
+      .column {
+        width: 33.333%;
+      }
+    }
+    
+    .card-item {
+      margin-bottom: 2rem;
+    }
+    
+    /* Styles pour le contenu dépliable */
+    .collapsible-content {
+      display: none;
+    }
+    
+    .collapsible-content.show {
+      display: block;
+    }
+    
+    .toggle-btn {
+      transition: transform 0.3s ease;
+    }
+    
+    .toggle-btn.expanded svg {
+      transform: rotate(180deg);
+    }
   </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
@@ -15,6 +59,32 @@
 
   <div class="max-w-7xl mx-auto py-10 px-4">
     <h1 class="text-3xl font-bold text-center mb-8">Image Availability</h1>
+
+    <!-- Stockage caché des données pour JavaScript -->
+    <div id="data-storage" style="display:none;">
+      {% for image in image_data %}
+        <div class="image-data" 
+          data-src="{{ image[0] }}" 
+          data-alt="{{ image[1] }}" 
+          data-title="{{ image[1] }}" 
+          data-completable="{{ image[3]|lower }}"
+          {% if not image[3] %}
+          data-progress="{{ image[4] }}"
+          data-total="{{ image[5] }}"
+          data-id="{{ image[6] }}"
+          {% endif %}
+        >
+          {% for color in image[2] %}
+            <div class="color-data"
+              data-color="{{ color[0] }}"
+              data-name="{{ color[1] }}"
+              data-required="{{ color[2] }}"
+              data-available="{{ color[3] }}"
+            ></div>
+          {% endfor %}
+        </div>
+      {% endfor %}
+    </div>
 
     <!-- Onglets pour basculer entre les images complétables et non complétables -->
     <div class="flex justify-center mb-8">
@@ -27,83 +97,22 @@
     </div>
 
     <!-- Section des images complétables -->
-    <div id="content-completable" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-      {% for image in image_data %}
-        {% if image[3] %}
-          <div class="relative bg-white rounded-xl shadow-lg overflow-hidden transform transition hover:scale-105">
-            <!-- Badge indiquant l'état -->
-            <div class="absolute top-2 right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-              ✅
-            </div>
-            <img src="{{ image[0] }}" alt="{{ image[1] }}" class="w-full h-48 object-cover">
-            <div class="p-4">
-              <h3 class="text-xl font-bold mb-2">{{ image[1] }}</h3>
-              <div class="space-y-2">
-                {% for color in image[2] %}
-                  <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-2">
-                      <span class="w-6 h-6 rounded-full border border-gray-300" style="background-color: {{ color[0] }};"></span>
-                      <span class="text-sm font-medium">{{ color[1] }}</span>
-                    </div>
-                    <div class="text-sm">
-                      <span class="mr-2">Req: {{ color[2] }}</span>
-                      <span class="font-semibold text-green-600">Avail: {{ color[3] }}</span>
-                    </div>
-                  </div>
-                {% endfor %}
-              </div>
-            </div>
-          </div>
-        {% endif %}
-      {% endfor %}
+    <div id="content-completable">
+      <div class="fixed-columns">
+        <div class="column column-1"></div>
+        <div class="column column-2"></div>
+        <div class="column column-3"></div>
+      </div>
     </div>
-  <!-- Section des images non complétables -->
-  <div id="content-noncompletable" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 hidden">
-    {% for image in image_data %}
-      {% if not image[3] %}
-        <div class="relative bg-white rounded-xl shadow-lg overflow-hidden transform transition hover:scale-105">
-          <!-- Badge indiquant l'état -->
-          <div class="absolute top-2 left-2">
-            <form action="{{ url_for('pearl_bp.delete_image', image_id=image[6]) }}" method="POST">
-              <button type="submit" class="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full hover:bg-red-700">
-                ❌
-              </button>
-            </form>
-          </div>
-          <img src="{{ image[0] }}" alt="{{ image[1] }}" class="w-full h-48 object-cover">
-          <div class="p-4">
-            <h3 class="text-xl font-bold mb-2">{{ image[1] }}</h3>
-            <!-- Ajout du pourcentage -->
-            <div class="mt-4">
-              <div class="w-full bg-gray-200 rounded-full h-2.5">
-                <div class="bg-blue-500 h-2.5 rounded-full" style="width: {{ image[4] }}%;"></div>
-              </div>
-                <div class="flex justify-between text-sm text-gray-600 mt-1">
-                <p>Progression : {{ image[4] }}%</p>
-                <p>Total : {{ image[5] }}</p>
-                </div>
-            </div>
-            <div class="space-y-2">
-              {% for color in image[2] %}
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center space-x-2">
-                    <span class="w-6 h-6 rounded-full border border-gray-300" style="background-color: {{ color[0] }};"></span>
-                    <span class="text-sm font-medium">{{ color[1] }}</span>
-                  </div>
-                  <div class="text-sm">
-                    <span class="mr-2">Req: {{ color[2] }}</span>
-                    <span class="font-semibold {% if color[3] < color[2] %} text-red-600 {% else %} text-green-600 {% endif %}">
-                      Avail: {{ color[3] }}
-                    </span>
-                  </div>
-                </div>
-              {% endfor %}
-            </div>
-          </div>
-        </div>
-      {% endif %}
-    {% endfor %}
-  </div>
+  
+    <!-- Section des images non complétables -->
+    <div id="content-noncompletable" class="hidden">
+      <div class="fixed-columns">
+        <div class="column column-1"></div>
+        <div class="column column-2"></div>
+        <div class="column column-3"></div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -130,6 +139,251 @@
 
     tabNonCompletable.addEventListener('click', () => {
         activateTab(tabNonCompletable, tabCompletable, contentNonCompletable, contentCompletable);
+    });
+    
+    // Distribution des éléments dans les colonnes fixes
+    document.addEventListener('DOMContentLoaded', function() {
+      // Récupérer les données depuis le stockage caché
+      const imageElements = document.querySelectorAll('#data-storage .image-data');
+      const completableImages = [];
+      const nonCompletableImages = [];
+      
+      // Transformer les éléments HTML en objets JavaScript
+      imageElements.forEach(imageEl => {
+        const isCompletable = imageEl.getAttribute('data-completable') === 'true';
+        const colors = [];
+        
+        // Récupérer les données de couleurs
+        imageEl.querySelectorAll('.color-data').forEach(colorEl => {
+          colors.push({
+            color: colorEl.getAttribute('data-color'),
+            name: colorEl.getAttribute('data-name'),
+            required: parseInt(colorEl.getAttribute('data-required')),
+            available: parseInt(colorEl.getAttribute('data-available'))
+          });
+        });
+        
+        // Créer l'objet image
+        const imageData = {
+          imgSrc: imageEl.getAttribute('data-src'),
+          imgAlt: imageEl.getAttribute('data-alt'),
+          title: imageEl.getAttribute('data-title'),
+          completable: isCompletable,
+          colors: colors
+        };
+        
+        // Ajouter des propriétés spécifiques pour les images non complétables
+        if (!isCompletable) {
+          imageData.progress = parseInt(imageEl.getAttribute('data-progress'));
+          imageData.total = parseInt(imageEl.getAttribute('data-total'));
+          imageData.id = parseInt(imageEl.getAttribute('data-id'));
+        }
+        
+        // Ajouter au tableau approprié
+        if (isCompletable) {
+          completableImages.push(imageData);
+        } else {
+          nonCompletableImages.push(imageData);
+        }
+      });
+
+      // Distribuer les images complétables dans les colonnes
+      const completableColumns = contentCompletable.querySelectorAll('.column');
+      distributeCards(completableImages, completableColumns);
+
+      // Distribuer les images non complétables dans les colonnes
+      const nonCompletableColumns = contentNonCompletable.querySelectorAll('.column');
+      distributeCards(nonCompletableImages, nonCompletableColumns);
+
+      // Fonction pour distribuer les cartes dans les colonnes
+      function distributeCards(images, columns) {
+        if (images.length === 0) return;
+        
+        const numColumns = columns.length;
+        
+        // Distribuer les cartes de manière équilibrée entre les colonnes
+        for (let i = 0; i < images.length; i++) {
+          const columnIndex = i % numColumns; // Distribution circulaire entre les colonnes
+          const image = images[i];
+          const card = createCardElement(image);
+          columns[columnIndex].appendChild(card);
+        }
+      }
+
+      // Fonction pour créer une carte à partir des données d'image
+      function createCardElement(imageData) {
+        const cardItem = document.createElement('div');
+        cardItem.className = 'card-item relative bg-white rounded-xl shadow-lg overflow-hidden transform transition hover:scale-105';
+        
+        // Badge
+        const badge = document.createElement('div');
+        if (imageData.completable) {
+          badge.className = 'absolute top-2 right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full';
+          badge.textContent = '✅';
+        } else {
+          badge.className = 'absolute top-2 left-2';
+          
+          const form = document.createElement('form');
+          form.action = "{{ url_for('pearl_bp.delete_image', image_id=0) }}".replace('0', imageData.id);
+          form.method = 'POST';
+          
+          const deleteBtn = document.createElement('button');
+          deleteBtn.type = 'submit';
+          deleteBtn.className = 'bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full hover:bg-red-700';
+          deleteBtn.textContent = '❌';
+          
+          form.appendChild(deleteBtn);
+          badge.appendChild(form);
+        }
+        cardItem.appendChild(badge);
+        
+        // Image
+        const img = document.createElement('img');
+        img.src = imageData.imgSrc;
+        img.alt = imageData.imgAlt;
+        img.className = 'w-full h-48 object-cover';
+        cardItem.appendChild(img);
+        
+        // Content container
+        const content = document.createElement('div');
+        content.className = 'p-4';
+        
+        // Title
+        const title = document.createElement('h3');
+        title.className = 'text-xl font-bold mb-2';
+        title.textContent = imageData.title;
+        content.appendChild(title);
+        
+        // Progress bar for non-completable images
+        if (!imageData.completable) {
+          const progressContainer = document.createElement('div');
+          progressContainer.className = 'mt-4';
+          
+          const progressBarOuter = document.createElement('div');
+          progressBarOuter.className = 'w-full bg-gray-200 rounded-full h-2.5';
+          
+          const progressBarInner = document.createElement('div');
+          progressBarInner.className = 'bg-blue-500 h-2.5 rounded-full';
+          progressBarInner.style.width = imageData.progress + '%';
+          
+          progressBarOuter.appendChild(progressBarInner);
+          progressContainer.appendChild(progressBarOuter);
+          
+          const progressInfo = document.createElement('div');
+          progressInfo.className = 'flex justify-between text-sm text-gray-600 mt-1';
+          
+          const progressText = document.createElement('p');
+          progressText.textContent = 'Progression : ' + imageData.progress + '%';
+          
+          const totalText = document.createElement('p');
+          totalText.textContent = 'Total : ' + imageData.total;
+          
+          progressInfo.appendChild(progressText);
+          progressInfo.appendChild(totalText);
+          
+          progressContainer.appendChild(progressInfo);
+          content.appendChild(progressContainer);
+        }
+        
+        // Toggle button
+        const toggleBtn = document.createElement('button');
+        toggleBtn.className = 'toggle-btn w-full flex items-center justify-center py-2 text-blue-600 hover:text-blue-800 focus:outline-none';
+        
+        const btnText = document.createElement('span');
+        btnText.className = 'mr-2';
+        btnText.textContent = 'Voir les détails';
+        
+        const btnIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        btnIcon.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+        btnIcon.setAttribute('class', 'h-6 w-6');
+        btnIcon.setAttribute('fill', 'none');
+        btnIcon.setAttribute('viewBox', '0 0 24 24');
+        btnIcon.setAttribute('stroke', 'currentColor');
+        
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('stroke-linecap', 'round');
+        path.setAttribute('stroke-linejoin', 'round');
+        path.setAttribute('stroke-width', '2');
+        path.setAttribute('d', 'M19 9l-7 7-7-7');
+        
+        btnIcon.appendChild(path);
+        toggleBtn.appendChild(btnText);
+        toggleBtn.appendChild(btnIcon);
+        
+        content.appendChild(toggleBtn);
+        
+        // Collapsible content
+        const collapsibleContent = document.createElement('div');
+        collapsibleContent.className = 'collapsible-content';
+        
+        const colorsList = document.createElement('div');
+        colorsList.className = 'space-y-2 mt-4';
+        
+        // Add colors
+        imageData.colors.forEach(colorData => {
+          const colorItem = document.createElement('div');
+          colorItem.className = 'flex items-center justify-between';
+          
+          const colorLeft = document.createElement('div');
+          colorLeft.className = 'flex items-center space-x-2';
+          
+          const colorCircle = document.createElement('span');
+          colorCircle.className = 'w-6 h-6 rounded-full border border-gray-300';
+          colorCircle.style.backgroundColor = colorData.color;
+          
+          const colorName = document.createElement('span');
+          colorName.className = 'text-sm font-medium';
+          colorName.textContent = colorData.name;
+          
+          colorLeft.appendChild(colorCircle);
+          colorLeft.appendChild(colorName);
+          
+          const colorRight = document.createElement('div');
+          colorRight.className = 'text-sm';
+          
+          const reqText = document.createElement('span');
+          reqText.className = 'mr-2';
+          reqText.textContent = 'Req: ' + colorData.required;
+          
+          const availText = document.createElement('span');
+          
+          if (imageData.completable) {
+            availText.className = 'font-semibold text-green-600';
+          } else {
+            availText.className = 'font-semibold ' + (colorData.available < colorData.required ? 'text-red-600' : 'text-green-600');
+          }
+          
+          availText.textContent = 'Avail: ' + colorData.available;
+          
+          colorRight.appendChild(reqText);
+          colorRight.appendChild(availText);
+          
+          colorItem.appendChild(colorLeft);
+          colorItem.appendChild(colorRight);
+          
+          colorsList.appendChild(colorItem);
+        });
+        
+        collapsibleContent.appendChild(colorsList);
+        content.appendChild(collapsibleContent);
+        
+        cardItem.appendChild(content);
+        
+        // Add event listener to toggle button
+        toggleBtn.addEventListener('click', function() {
+          collapsibleContent.classList.toggle('show');
+          this.classList.toggle('expanded');
+          
+          const textSpan = this.querySelector('span');
+          if (collapsibleContent.classList.contains('show')) {
+            textSpan.textContent = 'Masquer les détails';
+          } else {
+            textSpan.textContent = 'Voir les détails';
+          }
+        });
+        
+        return cardItem;
+      }
     });
   </script>
 </body>
