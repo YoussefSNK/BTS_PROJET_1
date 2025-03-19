@@ -15,116 +15,223 @@
 
     {% include 'navbar.html' %}
     
-    <div class="max-w-7xl mx-auto mt-12 p-8 bg-white shadow-xl rounded-xl">
-        <div class="text-center mb-10">
-            <h1 class="text-3xl font-bold text-slate-800 mb-2">Bibliothèque de posters</h1>
-            <p class="text-slate-500 max-w-2xl mx-auto">Explorez et gérez votre collection de posters. Recherchez par ratio ou ajoutez de nouvelles images.</p>
-        </div>
-
-        <!-- Bouton Ajouter une image -->
-        <div class="text-center mb-8">
-            <a href="/upload_poster" class="bg-indigo-600 text-white px-6 py-3 rounded-lg shadow-lg font-medium hover:bg-indigo-700 transition-all transform hover:scale-105 inline-flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                </svg>
-                Ajouter une image
-            </a>
-        </div>
-
-        <!-- Filtres de recherche -->
-        <div class="mb-10 bg-slate-50 p-6 rounded-xl shadow-inner">
-            <h2 class="text-xl font-semibold mb-4 text-slate-700">Filtres de recherche</h2>
-            <div class="flex flex-col md:flex-row justify-center items-center gap-6">
-                <div class="flex items-center">
-                    <input type="checkbox" id="allow-inverted-ratio" class="w-5 h-5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
-                    <label for="allow-inverted-ratio" class="ml-2 font-medium text-slate-700">Inclure les ratios inversés</label>
+    <!-- En-tête avec titre -->
+    <header class="bg-white shadow-md py-6 mb-8">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold text-slate-800">Bibliothèque de Posters</h1>
+                    <p class="text-slate-500 mt-1">Gérez et explorez votre collection d'images</p>
                 </div>
-
-                <div class="flex items-center gap-3">
-                    <label for="ratio-input" class="font-medium text-slate-700">Chercher par ratio :</label>
-                    <input type="number" id="ratio-input" step="0.01" class="border border-slate-300 p-2 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all">
-                    <button onclick="filterByRatio()" class="bg-slate-700 text-white px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors shadow-md flex items-center gap-2">
+                <div class="mt-4 md:mt-0">
+                    <a href="/upload_poster" class="bg-indigo-600 text-white px-6 py-3 rounded-lg shadow-lg font-medium hover:bg-indigo-700 transition-all transform hover:scale-105 inline-flex items-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                         </svg>
-                        Rechercher
-                    </button>
+                        Ajouter une image
+                    </a>
                 </div>
             </div>
         </div>
+    </header>
 
-        <h2 class="text-2xl font-semibold mb-4 text-slate-800 flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-indigo-500">
-                <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
-            </svg>
-            Galerie des posters
-        </h2>
-
-        <!-- Nouveau système de galerie avec scroll avancé -->
-        <div class="gallery-container relative select-none">
-            <!-- Navigation -->
-            <div class="gallery-navigation">
-                <button id="prev-btn" class="gallery-nav-btn left-0 opacity-80 hover:opacity-100">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
-                        <path fill-rule="evenodd" d="M7.72 12.53a.75.75 0 010-1.06l7.5-7.5a.75.75 0 111.06 1.06L9.31 12l6.97 6.97a.75.75 0 11-1.06 1.06l-7.5-7.5z" clip-rule="evenodd" />
-                    </svg>
-                </button>
-                <button id="next-btn" class="gallery-nav-btn right-0 opacity-80 hover:opacity-100">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
-                        <path fill-rule="evenodd" d="M16.28 11.47a.75.75 0 010 1.06l-7.5 7.5a.75.75 0 01-1.06-1.06L14.69 12 7.72 5.03a.75.75 0 011.06-1.06l7.5 7.5z" clip-rule="evenodd" />
-                    </svg>
-                </button>
-            </div>
-
-            <!-- Conteneur de scroll avec track et progressbar -->
-            <div class="gallery-scrollbar">
-                <div class="gallery-scrollbar-track"></div>
-                <div class="gallery-scrollbar-thumb"></div>
-            </div>
-
-            <!-- Conteneur des cartes -->
-            <div class="gallery-wrapper">
-                <div id="gallery-track" class="gallery-track">
-                {% for row in data %}
-                    <div class="gallery-item" data-ratio="{{ row[1] }}" data-width="{{ row[2] }}" data-height="{{ row[3] }}">
-                        <div class="gallery-card">
-                            <div class="gallery-img-container">
-                                <img src="{{ url_for('static', filename='images/' + row[4]) }}" class="gallery-img" alt="{{ row[0] }}">
-                                <div class="gallery-overlay">
-                                    <div class="gallery-actions">
-                                        <form action="/delete_poster/{{ row[5] }}" method="post" onsubmit="return confirm('Voulez-vous vraiment supprimer cette image ?');">
-                                            <input type="hidden" name="_method" value="DELETE">
-                                            <button type="submit" class="delete-btn" title="Supprimer">
-                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-                                                </svg>
-                                            </button>
-                                        </form>
-                                    </div>
-                                </div>
+    <!-- Contenu principal avec mise en page à deux colonnes -->
+    <main class="max-w-7xl mx-auto px-4 mb-12">
+        <div class="flex flex-col lg:flex-row gap-8">
+            
+            <!-- Barre latérale avec filtres et statistiques -->
+            <aside class="lg:w-1/4">
+                <!-- Carte des filtres -->
+                <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
+                    <h2 class="text-xl font-semibold mb-4 text-slate-800 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-indigo-500">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" />
+                        </svg>
+                        Filtres
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <!-- Recherche par ratio -->
+                        <div>
+                            <label for="ratio-input" class="block font-medium text-slate-700 mb-1">Chercher par ratio</label>
+                            <div class="flex gap-2">
+                                <input type="number" id="ratio-input" step="0.01" placeholder="Ex: 1.77" class="border border-slate-300 p-2 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all flex-grow">
+                                <button onclick="filterByRatio()" class="bg-slate-700 text-white p-2 rounded-lg hover:bg-slate-800 transition-colors shadow-md">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                                    </svg>
+                                </button>
                             </div>
-                            <div class="gallery-content">
-                                <h3 class="text-lg font-semibold text-slate-800">{{ row[0] }}</h3>
-                                <div class="flex justify-between items-center text-xs text-slate-500 mt-1">
-                                    <span class="bg-slate-100 px-2 py-1 rounded-md">Ratio: {{ row[1] }}</span>
-                                    <span class="bg-slate-100 px-2 py-1 rounded-md">{{ row[2] }}x{{ row[3] }}</span>
-                                </div>
+                        </div>
+                        
+                        <!-- Option pour les ratios inversés -->
+                        <div class="flex items-center">
+                            <input type="checkbox" id="allow-inverted-ratio" class="w-5 h-5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
+                            <label for="allow-inverted-ratio" class="ml-2 font-medium text-slate-700">Inclure les ratios inversés</label>
+                        </div>
+                        
+                        <!-- Sélection par orientation -->
+                        <div>
+                            <label class="block font-medium text-slate-700 mb-1">Orientation</label>
+                            <div class="flex gap-2">
+                                <button class="flex-1 py-2 px-3 rounded-md border border-slate-300 hover:bg-slate-50 transition-colors focus:ring-2 focus:ring-indigo-400">
+                                    <span class="block text-center">Portrait</span>
+                                </button>
+                                <button class="flex-1 py-2 px-3 rounded-md border border-slate-300 hover:bg-slate-50 transition-colors focus:ring-2 focus:ring-indigo-400">
+                                    <span class="block text-center">Paysage</span>
+                                </button>
+                                <button class="flex-1 py-2 px-3 rounded-md border border-slate-300 hover:bg-slate-50 transition-colors focus:ring-2 focus:ring-indigo-400">
+                                    <span class="block text-center">Carré</span>
+                                </button>
                             </div>
                         </div>
                     </div>
-                {% endfor %}
+                </div>
+                
+                <!-- Statistiques -->
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h2 class="text-xl font-semibold mb-4 text-slate-800 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-indigo-500">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+                        </svg>
+                        Statistiques
+                    </h2>
+                    <div class="space-y-3">
+                        <div class="flex justify-between">
+                            <span class="text-slate-600">Total des posters</span>
+                            <span class="font-semibold">{{ data|length }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-600">Format le plus courant</span>
+                            <span class="font-semibold">16:9</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-600">Orientation dominante</span>
+                            <span class="font-semibold">Paysage</span>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+            
+            <!-- Contenu principal avec onglets -->
+            <div class="lg:w-3/4">
+                <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                    <!-- Onglets de navigation -->
+                    <div class="border-b border-slate-200">
+                        <div class="flex">
+                            <button class="tab-button active py-4 px-6 font-medium border-b-2 border-indigo-500 text-indigo-600">
+                                Tous les posters
+                            </button>
+                            <button class="tab-button py-4 px-6 font-medium text-slate-600 hover:text-slate-800 transition-colors">
+                                Récemment ajoutés
+                            </button>
+                            <button class="tab-button py-4 px-6 font-medium text-slate-600 hover:text-slate-800 transition-colors">
+                                Favoris
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Vue principale -->
+                    <div class="p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-2xl font-semibold text-slate-800 flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-indigo-500">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                                </svg>
+                                Galerie
+                            </h2>
+                            
+                            <!-- Options d'affichage -->
+                            <div class="flex bg-slate-100 rounded-lg p-1">
+                                <button class="view-mode-btn active p-2 rounded-md">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />
+                                    </svg>
+                                </button>
+                                <button class="view-mode-btn p-2 rounded-md">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Système de galerie avec scroll avancé -->
+                        <div class="gallery-container relative select-none">
+                            <!-- Navigation -->
+                            <div class="gallery-navigation">
+                                <button id="prev-btn" class="gallery-nav-btn left-0 opacity-80 hover:opacity-100">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                                        <path fill-rule="evenodd" d="M7.72 12.53a.75.75 0 010-1.06l7.5-7.5a.75.75 0 111.06 1.06L9.31 12l6.97 6.97a.75.75 0 11-1.06 1.06l-7.5-7.5z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                                <button id="next-btn" class="gallery-nav-btn right-0 opacity-80 hover:opacity-100">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                                        <path fill-rule="evenodd" d="M16.28 11.47a.75.75 0 010 1.06l-7.5 7.5a.75.75 0 01-1.06-1.06L14.69 12 7.72 5.03a.75.75 0 011.06-1.06l7.5 7.5z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <!-- Conteneur de scroll avec track et progressbar -->
+                            <div class="gallery-scrollbar">
+                                <div class="gallery-scrollbar-track"></div>
+                                <div class="gallery-scrollbar-thumb"></div>
+                            </div>
+
+                            <!-- Conteneur des cartes -->
+                            <div class="gallery-wrapper">
+                                <div id="gallery-track" class="gallery-track">
+                                {% for row in data %}
+                                    <div class="gallery-item" data-ratio="{{ row[1] }}" data-width="{{ row[2] }}" data-height="{{ row[3] }}">
+                                        <div class="gallery-card">
+                                            <div class="gallery-img-container">
+                                                <img src="{{ url_for('static', filename='images/' + row[4]) }}" class="gallery-img" alt="{{ row[0] }}">
+                                                <div class="gallery-overlay">
+                                                    <div class="gallery-actions">
+                                                        <button class="action-btn favorite-btn" title="Ajouter aux favoris">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
+                                                            </svg>
+                                                        </button>
+                                                        <form action="/delete_poster/{{ row[5] }}" method="post" onsubmit="return confirm('Voulez-vous vraiment supprimer cette image ?');">
+                                                            <input type="hidden" name="_method" value="DELETE">
+                                                            <button type="submit" class="action-btn delete-btn" title="Supprimer">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                                                                </svg>
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="gallery-content">
+                                                <h3 class="text-lg font-semibold text-slate-800">{{ row[0] }}</h3>
+                                                <div class="flex justify-between items-center text-xs text-slate-500 mt-1">
+                                                    <span class="bg-slate-100 px-2 py-1 rounded-md">Ratio: {{ row[1] }}</span>
+                                                    <span class="bg-slate-100 px-2 py-1 rounded-md">{{ row[2] }}x{{ row[3] }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- Indicateurs de pagination (points) -->
+                            <div class="gallery-pagination mt-6"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
-
-            <!-- Indicateurs de pagination (points) -->
-            <div class="gallery-pagination mt-6"></div>
         </div>
-    </div>
+    </main>
 
     <!-- Crédit du site -->
-    <div class="text-center py-6 text-slate-500 text-sm">
-        <p>© 2025 Bibliothèque de Posters - Tous droits réservés</p>
-    </div>
+    <footer class="bg-white shadow-inner py-6 mt-8">
+        <div class="max-w-7xl mx-auto px-4 text-center text-slate-500 text-sm">
+            <p>© 2025 Bibliothèque de Posters - Tous droits réservés</p>
+        </div>
+    </footer>
 
     <!-- Styles pour la nouvelle galerie -->
     <style>
@@ -159,24 +266,18 @@
 
         /* Élément individuel de la galerie */
         .gallery-item {
-            flex: 0 0 calc(25% - 1.5rem);
+            flex: 0 0 calc(33.333% - 1.5rem);
             margin: 0 0.75rem;
             cursor: grab;
         }
 
-        @media (max-width: 1024px) {
-            .gallery-item {
-                flex: 0 0 calc(33.333% - 1.5rem);
-            }
-        }
-
-        @media (max-width: 768px) {
+        @media (max-width: 1280px) {
             .gallery-item {
                 flex: 0 0 calc(50% - 1.5rem);
             }
         }
 
-        @media (max-width: 480px) {
+        @media (max-width: 768px) {
             .gallery-item {
                 flex: 0 0 calc(100% - 1.5rem);
             }
@@ -243,8 +344,7 @@
             gap: 0.5rem;
         }
 
-        .delete-btn {
-            background-color: rgba(239, 68, 68, 0.9);
+        .action-btn {
             color: white;
             border: none;
             border-radius: 50%;
@@ -257,12 +357,25 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             transform: translateY(10px);
             opacity: 0;
+            background-color: rgba(79, 70, 229, 0.9);
         }
 
-        .gallery-card:hover .delete-btn {
+        .delete-btn {
+            background-color: rgba(239, 68, 68, 0.9);
+        }
+
+        .gallery-card:hover .action-btn {
             transform: translateY(0);
             opacity: 1;
-            transition-delay: 0.1s;
+        }
+
+        .gallery-card:hover .action-btn:nth-child(2) {
+            transition-delay: 0.05s;
+        }
+
+        .favorite-btn:hover {
+            background-color: rgb(79, 70, 229);
+            transform: scale(1.1);
         }
 
         .delete-btn:hover {
@@ -386,6 +499,36 @@
             outline: none;
             box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
         }
+
+        /* Styles des onglets */
+        .tab-button {
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .tab-button:not(.active):hover {
+            background-color: rgba(243, 244, 246, 0.5);
+        }
+
+        .tab-button.active {
+            font-weight: 600;
+        }
+
+        /* Options d'affichage */
+        .view-mode-btn {
+            color: #6B7280;
+            transition: all 0.3s;
+        }
+
+        .view-mode-btn:hover {
+            color: #374151;
+        }
+
+        .view-mode-btn.active {
+            background-color: white;
+            color: #4F46E5;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
     </style>
 
     <script>
@@ -414,6 +557,24 @@
             
             // Exposer la galerie au scope global pour y accéder depuis filterByRatio
             window.gallery = gallery;
+            
+            // Gestion des onglets
+            const tabButtons = document.querySelectorAll('.tab-button');
+            tabButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+            
+            // Gestion des modes d'affichage
+            const viewModeButtons = document.querySelectorAll('.view-mode-btn');
+            viewModeButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    viewModeButtons.forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
         });
     </script>
 </body>
