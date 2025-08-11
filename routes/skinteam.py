@@ -271,7 +271,7 @@ def team_combinations():
                     for role_name, role_id in roles_order:
                         structured_team[role_name] = roles_map.get(role_id)
 
-                    composition_key = tuple(structured_team[role_name]['champion_id'] for role_name, _ in roles_order if structured_team[role_name])
+                    composition_key = tuple(structured_team[role_name]['owner'] for role_name, _ in roles_order if structured_team[role_name])
                     
                     theme_name = next(iter(team))['theme_name']
                     
