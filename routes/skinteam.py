@@ -193,30 +193,40 @@ def team_combinations():
     user_ids = []
     grouped_teams = {}
     selected_roles = []
-    roles_order = [("TOP", 1), ("JUNGLE", 2), ("MID", 3), ("ADC", 4), ("SUPP", 5)]
-    
+    mode = "5v5"
+
+    roles_order_5v5 = [("TOP", 1), ("JUNGLE", 2), ("MID", 3), ("ADC", 4), ("SUPP", 5)]
+    roles_order_2v2 = [("ADC", 4), ("SUPP", 5)]
+
     conn = get_db_connection()
     users = conn.execute("SELECT id, login FROM user").fetchall()
-    
+
     if request.method == "POST":
+        mode = request.form.get('mode', '5v5')
+        num_users = 2 if mode == '2v2' else 5
+        roles_order = roles_order_2v2 if mode == '2v2' else roles_order_5v5
+
         users_data = []
-        for i in range(1, 6):
+        for i in range(1, num_users + 1):
             uid = request.form.get(f'user{i}')
             roles = request.form.getlist(f'user{i}_roles')
-            selected_roles.append(roles)  # Sauvegarde pour pré-remplir le formulaire
+            # En mode 2v2, ADC et SUPP sont sélectionnés par défaut
+            if mode == '2v2' and not roles:
+                roles = ['4', '5']
+            selected_roles.append(roles)
             if uid:
                 uid = int(uid)
                 allowed_roles = [int(r) for r in roles] if roles else []
                 users_data.append((uid, allowed_roles))
                 user_ids.append(uid)
-        
-        if len(users_data) == 5:
+
+        if len(users_data) == num_users:
             user_skins = {}
             # Récupérer et filtrer les skins de chaque utilisateur selon les rôles autorisés
             for uid, allowed_roles in users_data:
                 skins = conn.execute("""
-                    SELECT skin.id, skin.nom, skin.image_url, skin.champion_id, 
-                           theme.id as theme_id, theme.nom as theme_name, 
+                    SELECT skin.id, skin.nom, skin.image_url, skin.champion_id,
+                           theme.id as theme_id, theme.nom as theme_name,
                            role.id as role_id, role.nom as role_name
                     FROM utilisateur_skin
                     JOIN skin ON utilisateur_skin.skin_id = skin.id
@@ -226,10 +236,10 @@ def team_combinations():
                     JOIN role ON champion_role.role_id = role.id
                     WHERE utilisateur_skin.utilisateur_id = ?
                 """, (uid,)).fetchall()
-                
+
                 # Filtrer selon les rôles autorisés pour cet utilisateur
                 user_skins[uid] = [dict(skin) | {"owner": uid} for skin in skins if skin['role_id'] in allowed_roles]
-            
+
             # Regrouper les skins par thème et par utilisateur
             theme_user_skins = {}
             for uid, skins in user_skins.items():
@@ -240,18 +250,18 @@ def team_combinations():
                     if uid not in theme_user_skins[theme_id]:
                         theme_user_skins[theme_id][uid] = []
                     theme_user_skins[theme_id][uid].append(skin)
-            
+
             # Ne retenir que les thèmes où TOUS les utilisateurs ont au moins un skin autorisé
-            valid_themes = { theme_id: skins_by_user 
+            valid_themes = { theme_id: skins_by_user
                              for theme_id, skins_by_user in theme_user_skins.items()
                              if all(uid in skins_by_user for uid, _ in users_data) }
-            
+
             aggregated = {}
             ordered_user_ids = [uid for uid, _ in users_data]
             for theme_id, skins_by_user in valid_themes.items():
                 skins_lists = [skins_by_user[uid] for uid in ordered_user_ids]
                 possible_teams = product(*skins_lists)
-            
+
                 for team in possible_teams:
                     champions = set()
                     roles_map = {}
@@ -263,40 +273,42 @@ def team_combinations():
                             break
                         roles_map[role_id] = skin
                         champions.add(skin['champion_id'])
-                    
-                    if not valid_team or len(champions) != 5:
+
+                    if not valid_team or len(champions) != num_users:
                         continue
-                    
+
                     structured_team = {}
                     for role_name, role_id in roles_order:
                         structured_team[role_name] = roles_map.get(role_id)
 
-                    composition_key = tuple(structured_team[role_name]['champion_id'] for role_name, _ in roles_order if structured_team[role_name])
-                    
+                    composition_key = tuple(structured_team[role_name]['champion_id'] for role_name, _ in roles_order if structured_team.get(role_name))
+
                     theme_name = next(iter(team))['theme_name']
-                    
+
                     if theme_id not in aggregated:
                         aggregated[theme_id] = {"theme_name": theme_name, "teams": {}}
-                    
+
                     if composition_key not in aggregated[theme_id]["teams"]:
                         aggregated[theme_id]["teams"][composition_key] = {
                             role_name: [structured_team[role_name]] for role_name, _ in roles_order
                         }
                     else:
                         for role_name, _ in roles_order:
-                            skin = structured_team[role_name]
+                            skin = structured_team.get(role_name)
                             if skin and skin["id"] not in [s["id"] for s in aggregated[theme_id]["teams"][composition_key][role_name]]:
                                 aggregated[theme_id]["teams"][composition_key][role_name].append(skin)
-            
+
             final_grouped_teams = {}
             for theme_id, data in aggregated.items():
                 teams_list = list(data["teams"].values())
                 final_grouped_teams[theme_id] = {"theme_name": data["theme_name"], "teams": teams_list}
-            
+
             grouped_teams = final_grouped_teams
+    else:
+        roles_order = roles_order_5v5
 
     conn.close()
-    
+
     return render_template(
        "skinteam/team_combinations.html",
         user_ids=user_ids,
@@ -304,4 +316,5 @@ def team_combinations():
         users=users,
         selected_roles=selected_roles,
         roles_order=roles_order,
+        mode=mode,
     )
