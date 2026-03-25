@@ -5,7 +5,6 @@
     <title>Liste des Champions</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Starfield Background */
         #starfield {
             position: fixed;
             top: 0;
@@ -21,101 +20,200 @@
             height: auto;
             overflow-y: auto !important;
         }
-        .content-wrapper {
-            min-height: 150vh;
+        .champion-card {
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .champion-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 0 16px rgba(99, 102, 241, 0.5);
+        }
+        .champion-card.hidden {
+            display: none;
+        }
+        .role-filter-btn.active {
+            background-color: rgb(99, 102, 241);
+            border-color: rgb(99, 102, 241);
+            color: white;
         }
     </style>
 </head>
-<body class="bg-black text-white min-h-screen relative overflow-hidden">
+<body class="bg-black text-white min-h-screen relative">
     <canvas id="starfield"></canvas>
-    <div class="content-wrapper">
-        {% include 'navbar.html' %}
-        <div class="max-w-7xl mx-auto px-6 py-12 relative z-10">
-            <!-- En-tête -->
-            <div class="text-center mb-8">
-                <h1 class="text-4xl font-extrabold tracking-wide">
-                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600">
-                        Liste des Champions
-                    </span>
-                </h1>
-            </div>
 
-            <!-- Tableau des Champions -->
-            <div class="overflow-x-auto">
-                <table class="min-w-full bg-black border border-indigo-500 rounded-lg">
-                    <thead>
-                        <tr class="bg-indigo-600 text-white">
-                            <th class="px-4 py-2 border">Image</th>
-                            <th class="px-4 py-2 border">Nom</th>
-                            <th class="px-4 py-2 border">Rôles</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-700">
-                        {% for champion in champions | sort(attribute='nom') %}
-                        <tr class="hover:bg-gray-800">
-                            <td class="px-4 py-2 border">
-                                <img src="https://ddragon.leagueoflegends.com/cdn/14.1.1/img/champion/{{ champion.nom }}.png" alt="{{ champion.nom }}" class="w-16 h-16 mx-auto">
-                            </td>
-                            <td class="px-4 py-2 border text-center">{{ champion.nom }}</td>
-                            <td class="px-4 py-2 border text-center">
-                                <div class="flex justify-center space-x-2">
-                                    {% for role in roles %}
-                                        {% set assigned = role.id in champion_roles[champion.id] | map(attribute='id') | list %}
-                                        <img src="{{ role.image_url }}"
-                                             data-champion-id="{{ champion.id }}"
-                                             data-role-id="{{ role.id }}"
-                                             title="{{ role.nom }}"
-                                             alt="{{ role.nom }}"
-                                             class="role-icon w-8 h-8 cursor-pointer transition duration-200 ease-in-out transform hover:scale-110"
-                                             style="filter: {{ 'none' if assigned else 'grayscale(100%)' }};">
-                                    {% endfor %}
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+    {% include 'navbar.html' %}
+
+    <div class="max-w-7xl mx-auto px-6 py-12 relative z-10">
+        <!-- En-tête -->
+        <div class="text-center mb-10">
+            <h1 class="text-4xl font-extrabold tracking-wide mb-2">
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600">
+                    Liste des Champions
+                </span>
+            </h1>
+            <p class="text-gray-400 text-sm">{{ champions | length }} champions</p>
+        </div>
+
+        <!-- Barre de recherche -->
+        <div class="mb-6 flex justify-center">
+            <input
+                id="search-input"
+                type="text"
+                placeholder="Rechercher un champion..."
+                class="w-full max-w-md bg-gray-900 border border-indigo-500 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-500"
+            >
+        </div>
+
+        <!-- Filtres par rôle -->
+        <div class="flex flex-wrap justify-center gap-2 mb-8" id="role-filters">
+            <button
+                class="role-filter-btn active flex items-center gap-2 px-4 py-1.5 rounded-full border border-gray-600 text-sm text-gray-300 hover:border-indigo-400 transition"
+                data-role="all"
+            >
+                Tous
+            </button>
+            {% for role in roles %}
+            <button
+                class="role-filter-btn flex items-center gap-2 px-4 py-1.5 rounded-full border border-gray-600 text-sm text-gray-300 hover:border-indigo-400 transition"
+                data-role="{{ role.id }}"
+            >
+                <img src="{{ role.image_url }}" alt="{{ role.nom }}" class="w-5 h-5">
+                {{ role.nom }}
+            </button>
+            {% endfor %}
+        </div>
+
+        <!-- Compteur de résultats -->
+        <p id="result-count" class="text-center text-gray-500 text-sm mb-6"></p>
+
+        <!-- Grille des champions -->
+        <div id="champions-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+            {% for champion in champions | sort(attribute='nom') %}
+            <div
+                class="champion-card bg-gray-900 border border-gray-700 rounded-lg p-3 flex flex-col items-center gap-2"
+                data-name="{{ champion.nom | lower }}"
+                data-roles="{{ champion_roles[champion.id] | map(attribute='id') | list | join(',') }}"
+            >
+                <img
+                    src="https://ddragon.leagueoflegends.com/cdn/14.1.1/img/champion/{{ champion.nom }}.png"
+                    alt="{{ champion.nom }}"
+                    class="w-16 h-16 rounded"
+                >
+                <span class="text-xs font-semibold text-center text-gray-200 leading-tight">{{ champion.nom }}</span>
+                <div class="flex justify-center flex-nowrap gap-1">
+                    {% for role in roles %}
+                        {% set assigned = role.id in champion_roles[champion.id] | map(attribute='id') | list %}
+                        <img
+                            src="{{ role.image_url }}"
+                            data-champion-id="{{ champion.id }}"
+                            data-role-id="{{ role.id }}"
+                            title="{{ role.nom }}"
+                            alt="{{ role.nom }}"
+                            class="role-icon w-6 h-6 cursor-pointer transition duration-200 ease-in-out hover:scale-125"
+                            style="filter: {{ 'none' if assigned else 'grayscale(100%) opacity(0.4)' }};"
+                        >
+                    {% endfor %}
+                </div>
             </div>
+            {% endfor %}
+        </div>
+
+        <!-- Message aucun résultat -->
+        <div id="no-results" class="hidden text-center py-16 text-gray-500">
+            <p class="text-lg">Aucun champion trouvé.</p>
         </div>
     </div>
-    
+
     <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const roleIcons = document.querySelectorAll('.role-icon');
-        roleIcons.forEach(function(icon) {
-            icon.addEventListener('click', function() {
-                const championId = this.dataset.championId;
-                const roleId = this.dataset.roleId;
-                // Désactiver temporairement l'icône pour éviter les doubles clics
-                this.style.pointerEvents = 'none';
-                
-                fetch(`/champions/${championId}/toggle_role/${roleId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        this.style.filter = (data.action === 'added') ? 'none' : 'grayscale(100%)';
+    // --- Filtrage ---
+    const searchInput = document.getElementById('search-input');
+    const roleFilters = document.querySelectorAll('.role-filter-btn');
+    const cards = document.querySelectorAll('.champion-card');
+    const noResults = document.getElementById('no-results');
+    const resultCount = document.getElementById('result-count');
+
+    let activeRole = 'all';
+    let searchQuery = '';
+
+    function applyFilters() {
+        let visible = 0;
+        cards.forEach(card => {
+            const name = card.dataset.name;
+            const cardRoles = card.dataset.roles ? card.dataset.roles.split(',') : [];
+
+            const matchesSearch = name.includes(searchQuery);
+            const matchesRole = activeRole === 'all' || cardRoles.includes(activeRole);
+
+            if (matchesSearch && matchesRole) {
+                card.classList.remove('hidden');
+                visible++;
+            } else {
+                card.classList.add('hidden');
+            }
+        });
+
+        noResults.classList.toggle('hidden', visible > 0);
+        resultCount.textContent = visible < cards.length ? `${visible} résultat${visible > 1 ? 's' : ''}` : '';
+    }
+
+    searchInput.addEventListener('input', e => {
+        searchQuery = e.target.value.toLowerCase().trim();
+        applyFilters();
+    });
+
+    roleFilters.forEach(btn => {
+        btn.addEventListener('click', () => {
+            roleFilters.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            activeRole = btn.dataset.role;
+            applyFilters();
+        });
+    });
+
+    // --- Toggle rôle ---
+    document.querySelectorAll('.role-icon').forEach(icon => {
+        icon.addEventListener('click', function () {
+            const championId = this.dataset.championId;
+            const roleId = this.dataset.roleId;
+            this.style.pointerEvents = 'none';
+
+            fetch(`/champions/${championId}/toggle_role/${roleId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    const assigned = data.action === 'added';
+                    this.style.filter = assigned ? 'none' : 'grayscale(100%) opacity(0.4)';
+
+                    // Mettre à jour data-roles sur la carte parente
+                    const card = this.closest('.champion-card');
+                    let cardRoles = card.dataset.roles ? card.dataset.roles.split(',').filter(Boolean) : [];
+                    if (assigned) {
+                        if (!cardRoles.includes(roleId)) cardRoles.push(roleId);
                     } else {
-                        alert('Une erreur est survenue lors de la mise à jour.');
+                        cardRoles = cardRoles.filter(r => r !== roleId);
                     }
-                    this.style.pointerEvents = 'auto';
-                })
-                .catch(error => {
-                    console.error('Erreur:', error);
+                    card.dataset.roles = cardRoles.join(',');
+
+                    // Ré-appliquer le filtre actif
+                    applyFilters();
+                } else {
                     alert('Une erreur est survenue lors de la mise à jour.');
-                    this.style.pointerEvents = 'auto';
-                });
+                }
+                this.style.pointerEvents = 'auto';
+            })
+            .catch(() => {
+                alert('Une erreur est survenue lors de la mise à jour.');
+                this.style.pointerEvents = 'auto';
             });
         });
     });
     </script>
 
     <script src="{{ url_for('static', filename='script/stars.js') }}"></script>
-
 </body>
 </html>
