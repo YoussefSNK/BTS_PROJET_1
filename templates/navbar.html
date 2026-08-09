@@ -41,6 +41,18 @@
 
 <div class="h-24"></div>
 
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <div class="fixed top-28 left-1/2 -translate-x-1/2 z-[60] w-full max-w-md px-4 space-y-2">
+      {% for message in messages %}
+        <div class="bg-red-600 text-white text-sm font-medium px-4 py-3 rounded-lg shadow-lg text-center">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
 <style>
     .nav-link {
         color: #a3bffa; /* text-indigo-300 */

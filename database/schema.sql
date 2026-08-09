@@ -34,42 +34,73 @@ CREATE TABLE little_image (
 
 );
 
+DROP TABLE IF EXISTS RecipeColors;
+DROP TABLE IF EXISTS Recipe;
+DROP TABLE IF EXISTS Model;
+DROP TABLE IF EXISTS ImageColors;
+DROP TABLE IF EXISTS Images;
+DROP TABLE IF EXISTS UserBeads;
 DROP TABLE IF EXISTS Colors;
-CREATE TABLE Colors (
+DROP TABLE IF EXISTS ColorList;
+
+-- Une liste de perles (ex. "Hama ancienne liste", "Hama liste precise")
+CREATE TABLE ColorList (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    code TEXT UNIQUE NOT NULL,
-    name TEXT NOT NULL,
-    hex TEXT NOT NULL
+    nom TEXT UNIQUE NOT NULL
 );
 
+-- Couleurs d'une liste donnee. Un meme code (ex. H14) peut exister dans
+-- plusieurs listes avec un hex different.
+CREATE TABLE Colors (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    list_id INTEGER NOT NULL,
+    code TEXT NOT NULL,
+    name TEXT NOT NULL,
+    hex TEXT NOT NULL,
+    FOREIGN KEY (list_id) REFERENCES ColorList (id),
+    UNIQUE (list_id, code)
+);
 
+-- Stock de l'utilisateur, independant de la liste : garde par code
+-- pour ne pas avoir a ressaisir le stock quand une nouvelle liste est ajoutee.
 DROP TABLE IF EXISTS UserBeads;
 CREATE TABLE UserBeads (
     user_id INTEGER NOT NULL,
-    color_id INTEGER NOT NULL,
+    code TEXT NOT NULL,
     quantity INTEGER NOT NULL,
     FOREIGN KEY (user_id) REFERENCES user (id),
-    FOREIGN KEY (color_id) REFERENCES Colors (id),
-    PRIMARY KEY (user_id, color_id)
+    PRIMARY KEY (user_id, code)
 );
 
-DROP TABLE IF EXISTS Images;
-CREATE TABLE Images (
+-- Un modele = l'image originale. Peut avoir plusieurs recettes
+-- (une par combinaison liste de couleurs + type de dithering).
+CREATE TABLE Model (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
+    nom TEXT NOT NULL,
     image_path TEXT NOT NULL,
-    description TEXT,
     FOREIGN KEY (user_id) REFERENCES user (id)
 );
 
-DROP TABLE IF EXISTS ImageColors;
-CREATE TABLE ImageColors (
-    image_id INTEGER NOT NULL,
-    color_id INTEGER NOT NULL,
+-- Une recette = le rendu d'un modele pour une liste de couleurs et un
+-- dithering donnes (image uploadee directement, pas generee).
+CREATE TABLE Recipe (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    model_id INTEGER NOT NULL,
+    list_id INTEGER NOT NULL,
+    dithering_type TEXT NOT NULL CHECK (dithering_type IN ('none', 'floyd_steinberg', 'atkinson', 'ordered')),
+    image_path TEXT NOT NULL,
+    FOREIGN KEY (model_id) REFERENCES Model (id),
+    FOREIGN KEY (list_id) REFERENCES ColorList (id)
+);
+
+-- Repartition des couleurs necessaires pour une recette.
+CREATE TABLE RecipeColors (
+    recipe_id INTEGER NOT NULL,
+    code TEXT NOT NULL,
     quantity INTEGER NOT NULL,
-    FOREIGN KEY (image_id) REFERENCES Images (id),
-    FOREIGN KEY (color_id) REFERENCES Colors (id),
-    PRIMARY KEY (image_id, color_id)
+    FOREIGN KEY (recipe_id) REFERENCES Recipe (id),
+    PRIMARY KEY (recipe_id, code)
 );
 
 

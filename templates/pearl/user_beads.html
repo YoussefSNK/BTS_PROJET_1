@@ -57,6 +57,20 @@
       <h1 class="text-4xl font-extrabold text-center text-gray-800 mb-12 tracking-tight">
         Gérez vos perles
       </h1>
+
+      <!-- Switch de liste de couleurs -->
+      <div class="flex justify-center gap-3 mb-10">
+        {% for color_list in color_lists %}
+          <a href="{{ url_for('pearl_bp.user_beads', list_id=color_list[0]) }}"
+             class="px-4 py-2 rounded-full font-semibold shadow-md transition
+                    {% if color_list[0] == current_list_id %}bg-blue-600 text-white{% else %}bg-white text-gray-700 hover:bg-gray-100{% endif %}">
+            {{ color_list[1] }}
+          </a>
+        {% endfor %}
+      </div>
+
+      <p class="text-center text-sm text-gray-500 mb-8">Le stock est partagé entre toutes les listes (par code de perle).</p>
+
       <!-- Grille responsive pour afficher les cartes de perles -->
       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
         {% for color in colors %}
@@ -65,14 +79,15 @@
               <!-- Cercle coloré avec bordure et ombre pour accentuer la teinte -->
               <div class="w-24 h-24 rounded-full border-4 border-white shadow-lg planet" style="--base-color: {{ color[1] }};"></div>
               <div class="mt-4 text-center">
-                <p class="text-xl font-bold text-gray-900">{{ color[3] }} / {{ color[2] }}</p>
+                <p class="text-xl font-bold text-gray-900">{{ color[2] }} / {{ color[0] }}</p>
                 <p class="text-sm text-gray-600">{{ color[1] }}</p>
               </div>
               <!-- Formulaire individuel pour la mise à jour -->
               <form method="post" action="{{ url_for('pearl_bp.user_beads') }}" class="mt-6 w-full">
-                <input type="hidden" name="color_id" value="{{ color[0] }}">
+                <input type="hidden" name="code" value="{{ color[0] }}">
+                <input type="hidden" name="list_id" value="{{ current_list_id }}">
                 <div class="flex items-center justify-center space-x-3">
-                  <input type="number" name="quantity" value="{{ color[4] or 0 }}"
+                  <input type="number" name="quantity" value="{{ color[3] or 0 }}"
                          class="w-20 px-3 py-2 border border-gray-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
                          placeholder="0">
                   <button type="submit"
