@@ -8,7 +8,6 @@ from PIL import Image
 
 from datetime import datetime
 
-from routes.posters import poster_bp
 from routes.skinteam import skinteam_bp
 from routes.pearls import pearl_bp
 
@@ -30,7 +29,6 @@ def allowed_file(filename):
 
 
 
-app.register_blueprint(poster_bp)
 app.register_blueprint(skinteam_bp)
 app.register_blueprint(pearl_bp)
 
@@ -62,9 +60,9 @@ def register_user():
     user = verify_credentials(login, password)
     if user:
         session['authentifie'] = True
-        session['user_id'] = user[0] 
-        return redirect(url_for('poster_list'))
-    
+        session['user_id'] = user[0]
+        return redirect('/')
+
     return redirect('/')
 
 @app.route('/sign_in', methods=['GET', 'POST'])
