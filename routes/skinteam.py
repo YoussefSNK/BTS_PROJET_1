@@ -206,10 +206,12 @@ def team_combinations():
         num_users = 2 if mode == '2v2' else 5
         roles_order = roles_order_2v2 if mode == '2v2' else roles_order_5v5
 
+        field_prefix = 'duo_user' if mode == '2v2' else 'user'
+
         users_data = []
         for i in range(1, num_users + 1):
-            uid = request.form.get(f'user{i}')
-            roles = request.form.getlist(f'user{i}_roles')
+            uid = request.form.get(f'{field_prefix}{i}')
+            roles = request.form.getlist(f'{field_prefix}{i}_roles')
             # En mode 2v2, ADC et SUPP sont sélectionnés par défaut
             if mode == '2v2' and not roles:
                 roles = ['4', '5']
