@@ -123,6 +123,7 @@
               data-name="{{ color[1] }}"
               data-required="{{ color[2] }}"
               data-available="{{ color[3] }}"
+              data-code="{{ color[4] }}"
             ></div>
           {% endfor %}
         </div>
@@ -130,13 +131,21 @@
     </div>
 
     <!-- Onglets pour basculer entre les images complétables et non complétables -->
-    <div class="flex justify-center mb-8">
+    <div class="flex justify-center mb-4">
       <button id="tab-completable" class="px-4 py-2 font-medium text-blue-600 border-b-2 border-blue-600 focus:outline-none">
         Images You Can Complete ✅
       </button>
       <button id="tab-noncompletable" class="ml-4 px-4 py-2 font-medium text-gray-700 border-b-2 border-gray-300 hover:border-blue-600 focus:outline-none">
         Images You Cannot Complete ❌
       </button>
+    </div>
+
+    <!-- Bascule affichage nom / code couleur -->
+    <div class="flex justify-center mb-8">
+      <label class="flex items-center gap-2 cursor-pointer select-none text-sm font-medium text-gray-700">
+        <input type="checkbox" id="toggle-color-code" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+        Afficher les codes couleurs
+      </label>
     </div>
 
     <!-- Section des images complétables -->
@@ -184,6 +193,16 @@
         activateTab(tabNonCompletable, tabCompletable, contentNonCompletable, contentCompletable);
     });
     
+    // Bascule entre nom et code couleur
+    let showColorCode = false;
+    const toggleColorCode = document.getElementById('toggle-color-code');
+    toggleColorCode.addEventListener('change', function() {
+      showColorCode = this.checked;
+      document.querySelectorAll('.color-name-label').forEach(label => {
+        label.textContent = showColorCode ? (label.dataset.code + ' / ' + label.dataset.name) : label.dataset.name;
+      });
+    });
+
     // Distribution des éléments dans les colonnes fixes
     document.addEventListener('DOMContentLoaded', function() {
       // Récupérer les données depuis le stockage caché
@@ -202,7 +221,8 @@
             color: colorEl.getAttribute('data-color'),
             name: colorEl.getAttribute('data-name'),
             required: parseInt(colorEl.getAttribute('data-required')),
-            available: parseInt(colorEl.getAttribute('data-available'))
+            available: parseInt(colorEl.getAttribute('data-available')),
+            code: colorEl.getAttribute('data-code')
           });
         });
         
@@ -376,8 +396,10 @@
           colorCircle.style.backgroundColor = colorData.color;
           
           const colorName = document.createElement('span');
-          colorName.className = 'text-sm font-medium';
-          colorName.textContent = colorData.name;
+          colorName.className = 'text-sm font-medium color-name-label';
+          colorName.dataset.name = colorData.name;
+          colorName.dataset.code = colorData.code;
+          colorName.textContent = showColorCode ? (colorData.code + ' / ' + colorData.name) : colorData.name;
           
           colorLeft.appendChild(colorCircle);
           colorLeft.appendChild(colorName);

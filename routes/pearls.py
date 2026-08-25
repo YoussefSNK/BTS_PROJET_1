@@ -364,7 +364,7 @@ def image_availability():
                 total_available += min(user_quantity, required_quantity)
                 if user_quantity < required_quantity:
                     sufficient = False
-                colors_status.append((hex_code, color_name, required_quantity, user_quantity))
+                colors_status.append((hex_code, color_name, required_quantity, user_quantity, code))
 
             completion_rate = round((total_available / total_required * 100), 1) if total_required > 0 else 0
             title = f"{model_nom} — {DITHERING_LABELS.get(dithering_type, dithering_type)} ({list_nom})"
