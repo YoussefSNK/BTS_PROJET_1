@@ -34,6 +34,7 @@ CREATE TABLE little_image (
 
 );
 
+DROP TABLE IF EXISTS PearlHistory;
 DROP TABLE IF EXISTS RecipeColors;
 DROP TABLE IF EXISTS Recipe;
 DROP TABLE IF EXISTS Model;
@@ -70,6 +71,17 @@ CREATE TABLE UserBeads (
     quantity INTEGER NOT NULL,
     FOREIGN KEY (user_id) REFERENCES user (id),
     PRIMARY KEY (user_id, code)
+);
+
+-- Historique des changements de stock de perles (une ligne par mise a jour de quantite).
+CREATE TABLE PearlHistory (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    code TEXT NOT NULL,
+    old_quantity INTEGER NOT NULL,
+    new_quantity INTEGER NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES user (id)
 );
 
 -- Un modele = l'image originale. Peut avoir plusieurs recettes

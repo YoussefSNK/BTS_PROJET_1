@@ -281,12 +281,24 @@ def user_beads():
                     flash("Veuillez entrer une valeur numérique valide.")
                     conn.close()
                     return redirect(url_for('pearl_bp.user_beads', list_id=list_id))
+
+                cursor.execute('SELECT quantity FROM UserBeads WHERE user_id = ? AND code = ?', (user_id, code))
+                row = cursor.fetchone()
+                old_quantity = row[0] if row else 0
+
                 cursor.execute('''
                     INSERT INTO UserBeads (user_id, code, quantity)
                     VALUES (?, ?, ?)
                     ON CONFLICT(user_id, code)
                     DO UPDATE SET quantity=excluded.quantity
                 ''', (user_id, code, quantity))
+
+                if quantity != old_quantity:
+                    cursor.execute('''
+                        INSERT INTO PearlHistory (user_id, code, old_quantity, new_quantity)
+                        VALUES (?, ?, ?, ?)
+                    ''', (user_id, code, old_quantity, quantity))
+
                 conn.commit()
             conn.close()
             return redirect(url_for('pearl_bp.user_beads', list_id=list_id))
@@ -307,6 +319,28 @@ def user_beads():
         conn.close()
         return render_template('pearl/user_beads.html', colors=colors, color_lists=color_lists,
                                 current_list_id=list_id)
+    else:
+        return redirect('/')
+
+
+@pearl_bp.route('/pearl_history', methods=['GET'])
+def pearl_history():
+    if 'authentifie' in session and session['authentifie']:
+        user_id = session.get('user_id')
+
+        conn = sqlite3.connect('database/database.db')
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            SELECT code, old_quantity, new_quantity, created_at
+            FROM PearlHistory
+            WHERE user_id = ?
+            ORDER BY created_at DESC, id DESC
+        ''', (user_id,))
+        history = cursor.fetchall()
+        conn.close()
+
+        return render_template('pearl/history.html', history=history)
     else:
         return redirect('/')
 
