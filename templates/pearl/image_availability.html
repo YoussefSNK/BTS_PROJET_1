@@ -185,14 +185,23 @@
         inactiveContent.classList.add('hidden');
     }
 
+    const ACTIVE_TAB_KEY = 'imageAvailabilityActiveTab';
+
     tabCompletable.addEventListener('click', () => {
         activateTab(tabCompletable, tabNonCompletable, contentCompletable, contentNonCompletable);
+        localStorage.setItem(ACTIVE_TAB_KEY, 'completable');
     });
 
     tabNonCompletable.addEventListener('click', () => {
         activateTab(tabNonCompletable, tabCompletable, contentNonCompletable, contentCompletable);
+        localStorage.setItem(ACTIVE_TAB_KEY, 'noncompletable');
     });
-    
+
+    // Restaure l'onglet actif avant le changement de liste de couleurs (qui recharge la page)
+    if (localStorage.getItem(ACTIVE_TAB_KEY) === 'noncompletable') {
+        activateTab(tabNonCompletable, tabCompletable, contentNonCompletable, contentCompletable);
+    }
+
     // Bascule entre nom et code couleur
     let showColorCode = false;
     const toggleColorCode = document.getElementById('toggle-color-code');
