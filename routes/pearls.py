@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, current_app
+import re
 import sqlite3, os, math
 
 from werkzeug.utils import secure_filename
@@ -26,6 +27,15 @@ UNKNOWN_QUANTITY = -1
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+CODE_PATTERN = re.compile(r'^([^\d]*)(\d*)(.*)$')
+
+
+def natural_code_key(code):
+    """Trie les codes de perles par prefixe puis par valeur numerique (H9 < H10 < H101)."""
+    prefix, number, suffix = CODE_PATTERN.match(code).groups()
+    return (prefix, int(number) if number else -1, suffix)
 
 
 
@@ -324,9 +334,8 @@ def user_beads():
             FROM Colors c
             LEFT JOIN UserBeads ub ON c.code = ub.code AND ub.user_id = ?
             WHERE c.list_id = ?
-            ORDER BY c.code
         ''', (user_id, list_id))
-        colors = cursor.fetchall()
+        colors = sorted(cursor.fetchall(), key=lambda row: natural_code_key(row[0]))
         conn.close()
         return render_template('pearl/user_beads.html', colors=colors, color_lists=color_lists,
                                 current_list_id=list_id, unknown_quantity=UNKNOWN_QUANTITY)
@@ -396,7 +405,7 @@ def image_availability():
                 JOIN Colors c ON c.list_id = (SELECT list_id FROM Recipe WHERE id = ?) AND c.code = rc.code
                 WHERE rc.recipe_id = ?
             ''', (recipe_id, recipe_id))
-            recipe_colors = cursor.fetchall()
+            recipe_colors = sorted(cursor.fetchall(), key=lambda row: natural_code_key(row[3]))
 
             sufficient = True
             colors_status = []
