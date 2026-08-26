@@ -115,6 +115,8 @@
           data-progress="{{ image[4] }}"
           data-total="{{ image[5] }}"
           data-id="{{ image[6] }}"
+          data-progress-optimistic="{{ image[7] }}"
+          data-has-unknown="{{ image[8]|lower }}"
           {% endif %}
         >
           {% for color in image[2] %}
@@ -249,6 +251,8 @@
           imageData.progress = parseInt(imageEl.getAttribute('data-progress'));
           imageData.total = parseInt(imageEl.getAttribute('data-total'));
           imageData.id = parseInt(imageEl.getAttribute('data-id'));
+          imageData.progressOptimistic = parseFloat(imageEl.getAttribute('data-progress-optimistic'));
+          imageData.hasUnknown = imageEl.getAttribute('data-has-unknown') === 'true';
         }
         
         // Ajouter au tableau approprié
@@ -345,8 +349,14 @@
           progressInfo.className = 'flex justify-between text-sm text-gray-600 mt-1';
           
           const progressText = document.createElement('p');
-          progressText.textContent = 'Progression : ' + imageData.progress + '%';
-          
+          progressText.appendChild(document.createTextNode('Progression : ' + imageData.progress + '%'));
+          if (imageData.hasUnknown) {
+            const optimisticSpan = document.createElement('span');
+            optimisticSpan.className = 'text-orange-500 font-semibold';
+            optimisticSpan.textContent = ' ' + imageData.progressOptimistic + '%';
+            progressText.appendChild(optimisticSpan);
+          }
+
           const totalText = document.createElement('p');
           totalText.textContent = 'Total : ' + imageData.total;
           
@@ -421,14 +431,17 @@
           reqText.textContent = 'Req: ' + colorData.required;
           
           const availText = document.createElement('span');
-          
-          if (imageData.completable) {
+          const isUnknown = colorData.available === -1;
+
+          if (isUnknown) {
+            availText.className = 'font-semibold text-orange-500';
+          } else if (imageData.completable) {
             availText.className = 'font-semibold text-green-600';
           } else {
             availText.className = 'font-semibold ' + (colorData.available < colorData.required ? 'text-red-600' : 'text-green-600');
           }
-          
-          availText.textContent = 'Avail: ' + colorData.available;
+
+          availText.textContent = 'Avail: ' + (isUnknown ? '?' : colorData.available);
           
           colorRight.appendChild(reqText);
           colorRight.appendChild(availText);

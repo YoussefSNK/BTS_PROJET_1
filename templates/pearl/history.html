@@ -44,10 +44,10 @@
                 <tr class="hover:bg-gray-50">
                   <td class="px-6 py-3 text-sm text-gray-600 whitespace-nowrap">{{ created_at }}</td>
                   <td class="px-6 py-3 font-semibold text-gray-800">{{ code }}</td>
-                  <td class="px-6 py-3 text-gray-600">{{ old_quantity }}</td>
-                  <td class="px-6 py-3 text-gray-600">{{ new_quantity }}</td>
-                  <td class="px-6 py-3 font-semibold {% if diff > 0 %}text-green-600{% elif diff < 0 %}text-red-600{% else %}text-gray-400{% endif %}">
-                    {{ '+%d' % diff if diff > 0 else diff }}
+                  <td class="px-6 py-3 text-gray-600">{{ '?' if old_quantity == -1 else old_quantity }}</td>
+                  <td class="px-6 py-3 text-gray-600">{{ '?' if new_quantity == -1 else new_quantity }}</td>
+                  <td class="px-6 py-3 font-semibold {% if old_quantity == -1 or new_quantity == -1 %}text-orange-500{% elif diff > 0 %}text-green-600{% elif diff < 0 %}text-red-600{% else %}text-gray-400{% endif %}">
+                    {% if old_quantity == -1 or new_quantity == -1 %}—{% else %}{{ '+%d' % diff if diff > 0 else diff }}{% endif %}
                   </td>
                 </tr>
               {% endfor %}

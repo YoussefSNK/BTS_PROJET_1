@@ -20,6 +20,9 @@ DITHERING_TYPES = [
 DITHERING_LABELS = dict(DITHERING_TYPES)
 VALID_DITHERING_TYPES = {code for code, _ in DITHERING_TYPES}
 
+# Quantite sentinelle : "j'en ai, mais je ne sais pas combien".
+UNKNOWN_QUANTITY = -1
+
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -268,20 +271,28 @@ def user_beads():
         color_lists = cursor.fetchall()
         if not color_lists:
             conn.close()
-            return render_template('pearl/user_beads.html', colors=[], color_lists=[], current_list_id=None)
+            return render_template('pearl/user_beads.html', colors=[], color_lists=[], current_list_id=None,
+                                    unknown_quantity=UNKNOWN_QUANTITY)
 
         if request.method == 'POST':
             code = request.form.get('code')
             list_id = request.form.get('list_id', type=int)
+            is_unknown = request.form.get('unknown_quantity') == '1'
             quantity_str = request.form.get('quantity')
-            if code and quantity_str is not None:
+
+            if code and is_unknown:
+                quantity = UNKNOWN_QUANTITY
+            elif code and quantity_str is not None:
                 try:
                     quantity = int(quantity_str)
                 except ValueError:
                     flash("Veuillez entrer une valeur numérique valide.")
                     conn.close()
                     return redirect(url_for('pearl_bp.user_beads', list_id=list_id))
+            else:
+                code = None
 
+            if code:
                 cursor.execute('SELECT quantity FROM UserBeads WHERE user_id = ? AND code = ?', (user_id, code))
                 row = cursor.fetchone()
                 old_quantity = row[0] if row else 0
@@ -318,7 +329,7 @@ def user_beads():
         colors = cursor.fetchall()
         conn.close()
         return render_template('pearl/user_beads.html', colors=colors, color_lists=color_lists,
-                                current_list_id=list_id)
+                                current_list_id=list_id, unknown_quantity=UNKNOWN_QUANTITY)
     else:
         return redirect('/')
 
@@ -391,19 +402,29 @@ def image_availability():
             colors_status = []
             total_required = 0
             total_available = 0
+            total_available_optimistic = 0
+            has_unknown = False
 
             for hex_code, color_name, required_quantity, code in recipe_colors:
                 user_quantity = user_beads_stock.get(code, 0)
                 total_required += required_quantity
-                total_available += min(user_quantity, required_quantity)
-                if user_quantity < required_quantity:
+                if user_quantity == UNKNOWN_QUANTITY:
                     sufficient = False
+                    has_unknown = True
+                    total_available_optimistic += required_quantity
+                else:
+                    total_available += min(user_quantity, required_quantity)
+                    total_available_optimistic += min(user_quantity, required_quantity)
+                    if user_quantity < required_quantity:
+                        sufficient = False
                 colors_status.append((hex_code, color_name, required_quantity, user_quantity, code))
 
             completion_rate = round((total_available / total_required * 100), 1) if total_required > 0 else 0
+            completion_rate_optimistic = round((total_available_optimistic / total_required * 100), 1) if total_required > 0 else 0
             title = f"{model_nom} — {DITHERING_LABELS.get(dithering_type, dithering_type)} ({list_nom})"
             image_url = url_for('static', filename=f'images/{image_path}')
-            image_data.append((image_url, title, colors_status, sufficient, completion_rate, total_required, recipe_id))
+            image_data.append((image_url, title, colors_status, sufficient, completion_rate, total_required, recipe_id,
+                                completion_rate_optimistic, has_unknown))
 
         conn.close()
 
