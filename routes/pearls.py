@@ -475,3 +475,12 @@ def delete_image(image_id):
         if model_id and not model_deleted:
             return redirect(url_for('pearl_bp.model_detail', model_id=model_id))
     return redirect(url_for('pearl_bp.image_availability'))
+
+
+@pearl_bp.route('/point_counter', methods=['GET'])
+def point_counter():
+    """Page de comptage : on charge une image et on clique dessus pour y poser
+    des points numerotes. Tout se passe cote client, rien n'est enregistre."""
+    if 'authentifie' in session and session['authentifie']:
+        return render_template('pearl/point_counter.html')
+    return redirect('/')
