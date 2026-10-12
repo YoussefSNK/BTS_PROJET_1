@@ -122,12 +122,13 @@ def block_size(lines):
     return max(size, 1)
 
 
-def analyse_recipe(path, palette):
+def analyse_recipe(path, palette, detect_scale=True):
     """Retourne (largeur, hauteur, {code: quantite}) en perles.
 
     Une recette est souvent exportee agrandie (chaque perle = un carre de N x N pixels) :
     on detecte ce facteur, on ramene l'image a une perle par pixel, puis chaque couleur
     est associee a la couleur la plus proche de la palette. Les pixels transparents sont ignores.
+    `detect_scale=False` pour une image deja a une perle par pixel (recette generee par l'app).
     """
     with Image.open(path) as source:
         img = source.convert('RGBA')
@@ -136,7 +137,7 @@ def analyse_recipe(path, palette):
     rows = [row_bytes[y * width * 4:(y + 1) * width * 4] for y in range(height)]
     col_bytes = img.transpose(Image.Transpose.TRANSPOSE).tobytes()
     cols = [col_bytes[x * height * 4:(x + 1) * height * 4] for x in range(width)]
-    bx, by = block_size(cols), block_size(rows)
+    bx, by = (block_size(cols), block_size(rows)) if detect_scale else (1, 1)
     if bx > 1 or by > 1:
         img = img.resize((width // bx, height // by), Image.Resampling.NEAREST)
         width, height = img.size
@@ -448,6 +449,7 @@ def create_recipe():
     model_id = request.form.get('model_id', type=int)
     list_id = request.form.get('list_id', type=int)
     dithering = request.form.get('dith')
+    exact = request.form.get('exact') == '1'
     if dithering not in DITHERING_TYPES:
         return error('Type de dithering invalide.')
     file, err = get_file()
@@ -474,7 +476,7 @@ def create_recipe():
     recipe_id = cursor.lastrowid
     filename = save_upload(file, f'recipe_{recipe_id}')
     try:
-        width, height, counts = analyse_recipe(upload_path(filename), palette)
+        width, height, counts = analyse_recipe(upload_path(filename), palette, detect_scale=not exact)
     except OSError:
         conn.rollback()
         conn.close()
