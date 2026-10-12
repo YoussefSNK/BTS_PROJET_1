@@ -107,7 +107,7 @@ function parseCmd(text) {
   }
   return ops;
 }
-const DITHERS = [{ id:'none', label:'Aucun' }, { id:'floyd_steinberg', label:'Floyd-Steinberg' }, { id:'atkinson', label:'Atkinson' }, { id:'ordered', label:'Ordonné (Bayer)' }];
+const DITHERS = [{ id:'none', label:'Aucun' }, { id:'atkinson', label:'Atkinson' }, { id:'floyd_steinberg', label:'Floyd-Steinberg' }, { id:'ordered', label:'Ordonné (Bayer)' }];
 const dithLabel = id => (DITHERS.find(d => d.id === id) || { label:id }).label;
 const palShort = id => (PAL_BY_ID[id] || { short:'?' }).short;
 const ring = hex => `radial-gradient(circle, transparent 0 25%, ${hex} 27%)`;
