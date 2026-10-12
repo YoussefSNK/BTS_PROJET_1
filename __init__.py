@@ -2,7 +2,6 @@ from flask import Flask, render_template, request, redirect, url_for, session
 import sqlite3
 
 from routes.skinteam import skinteam_bp
-from routes.pearls import pearl_bp
 from routes.tama import tama_bp
 
 app = Flask(__name__)                                                                                                                  
@@ -17,7 +16,6 @@ UPLOAD_FOLDER = './static/images'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 app.register_blueprint(skinteam_bp)
-app.register_blueprint(pearl_bp)
 app.register_blueprint(tama_bp)
 
 
