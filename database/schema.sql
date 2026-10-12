@@ -37,6 +37,7 @@ CREATE TABLE little_image (
 DROP TABLE IF EXISTS PearlHistory;
 DROP TABLE IF EXISTS RecipeColors;
 DROP TABLE IF EXISTS Recipe;
+DROP TABLE IF EXISTS ModelTag;
 DROP TABLE IF EXISTS Model;
 DROP TABLE IF EXISTS ImageColors;
 DROP TABLE IF EXISTS Images;
@@ -57,6 +58,7 @@ CREATE TABLE Colors (
     list_id INTEGER NOT NULL,
     code TEXT NOT NULL,
     name TEXT NOT NULL,
+    name_fr TEXT,
     hex TEXT NOT NULL,
     FOREIGN KEY (list_id) REFERENCES ColorList (id),
     UNIQUE (list_id, code)
@@ -80,6 +82,8 @@ CREATE TABLE PearlHistory (
     code TEXT NOT NULL,
     old_quantity INTEGER NOT NULL,
     new_quantity INTEGER NOT NULL,
+    note TEXT NOT NULL DEFAULT '',
+    undone INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES user (id)
 );
@@ -94,6 +98,14 @@ CREATE TABLE Model (
     FOREIGN KEY (user_id) REFERENCES user (id)
 );
 
+-- Tags libres d'un modele.
+CREATE TABLE ModelTag (
+    model_id INTEGER NOT NULL,
+    tag TEXT NOT NULL,
+    FOREIGN KEY (model_id) REFERENCES Model (id),
+    PRIMARY KEY (model_id, tag)
+);
+
 -- Une recette = le rendu d'un modele pour une liste de couleurs et un
 -- dithering donnes (image uploadee directement, pas generee).
 CREATE TABLE Recipe (
@@ -102,6 +114,8 @@ CREATE TABLE Recipe (
     list_id INTEGER NOT NULL,
     dithering_type TEXT NOT NULL CHECK (dithering_type IN ('none', 'floyd_steinberg', 'atkinson', 'ordered')),
     image_path TEXT NOT NULL,
+    width INTEGER NOT NULL DEFAULT 0,
+    height INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY (model_id) REFERENCES Model (id),
     FOREIGN KEY (list_id) REFERENCES ColorList (id)
 );

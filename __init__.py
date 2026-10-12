@@ -3,6 +3,7 @@ import sqlite3
 
 from routes.skinteam import skinteam_bp
 from routes.pearls import pearl_bp
+from routes.tama import tama_bp
 
 app = Flask(__name__)                                                                                                                  
 app.secret_key = b'_5#y2L"F4Q8z\n\xec]/'  # Clé secrète pour les sessions
@@ -17,13 +18,14 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 app.register_blueprint(skinteam_bp)
 app.register_blueprint(pearl_bp)
+app.register_blueprint(tama_bp)
 
 
 
 @app.route('/', methods=['GET'])
 def return_home():
     if 'authentifie' in session and session['authentifie']:
-        return render_template('home.html')
+        return render_template('tama.html')
     else:
         return redirect(url_for('login_form'))
 
