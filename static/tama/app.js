@@ -115,6 +115,47 @@ const fmt = n => Number(n).toLocaleString('fr-FR');
 const plates = (w, hh) => { const n = Math.ceil(w / 29) * Math.ceil(hh / 29); return n + (n > 1 ? ' plaques' : ' plaque'); };
 const mk = (w, hh) => { const c = document.createElement('canvas'); c.width = w; c.height = hh; return c; };
 const readURL = f => new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(f); });
+
+// ---------- génération d'une recette depuis l'image d'origine ----------
+const GEN_DEFAULT_W = 58, GEN_MIN_W = 4, GEN_MAX_W = 200;
+const genWidth = v => Math.min(GEN_MAX_W, Math.max(GEN_MIN_W, parseInt(v, 10) || GEN_DEFAULT_W));
+const TRANSLUCENT = /Transparent|Clear|Translucent/i;
+const BAYER = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
+// Réduction par paliers de moitié : un seul drawImage d'une grande image vers 58 px crénèle beaucoup.
+function sourcePixels(img, W, H) {
+  let c = mk(img.naturalWidth, img.naturalHeight); c.getContext('2d').drawImage(img, 0, 0);
+  while (c.width / 2 >= W && c.height / 2 >= H) {
+    const n = mk(Math.round(c.width / 2), Math.round(c.height / 2)), x = n.getContext('2d');
+    x.imageSmoothingQuality = 'high'; x.drawImage(c, 0, 0, n.width, n.height); c = n;
+  }
+  const o = mk(W, H), ox = o.getContext('2d'); ox.imageSmoothingQuality = 'high'; ox.drawImage(c, 0, 0, W, H);
+  return ox.getImageData(0, 0, W, H).data;
+}
+// Une perle par pixel ; les pixels transparents (alpha < 128) restent sans perle et ne diffusent pas d'erreur.
+function ditherImage(data, W, H, colors, mode) {
+  const n = W * H, buf = new Float32Array(n * 3), solid = new Uint8Array(n);
+  for (let i = 0; i < n; i++) { buf[i * 3] = data[i * 4]; buf[i * 3 + 1] = data[i * 4 + 1]; buf[i * 3 + 2] = data[i * 4 + 2]; solid[i] = data[i * 4 + 3] >= 128 ? 1 : 0; }
+  const out = mk(W, H), ox = out.getContext('2d'), od = ox.createImageData(W, H), counts = {};
+  const spread = (x, y, er, eg, eb, f) => { if (x < 0 || x >= W || y >= H) return; const j = y * W + x; if (!solid[j]) return; buf[j * 3] += er * f; buf[j * 3 + 1] += eg * f; buf[j * 3 + 2] += eb * f; };
+  const clamp = v => v < 0 ? 0 : v > 255 ? 255 : v;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = y * W + x; if (!solid[i]) continue;
+    let r = buf[i * 3], g = buf[i * 3 + 1], b = buf[i * 3 + 2];
+    if (mode === 'ordered') { const t = (BAYER[y % 4][x % 4] / 16 - .47) * 56; r += t; g += t; b += t; }
+    r = clamp(r); g = clamp(g); b = clamp(b);
+    let best = 0, bd = Infinity;
+    for (let k = 0; k < colors.length; k++) { const c = colors[k].rgb, d = 2 * (r - c[0]) ** 2 + 4 * (g - c[1]) ** 2 + 3 * (b - c[2]) ** 2; if (d < bd) { bd = d; best = k; } }
+    const c = colors[best]; counts[c.code] = (counts[c.code] || 0) + 1;
+    od.data[i * 4] = c.rgb[0]; od.data[i * 4 + 1] = c.rgb[1]; od.data[i * 4 + 2] = c.rgb[2]; od.data[i * 4 + 3] = 255;
+    if (mode === 'floyd_steinberg' || mode === 'atkinson') {
+      const er = r - c.rgb[0], eg = g - c.rgb[1], eb = b - c.rgb[2];
+      if (mode === 'floyd_steinberg') { spread(x + 1, y, er, eg, eb, 7 / 16); spread(x - 1, y + 1, er, eg, eb, 3 / 16); spread(x, y + 1, er, eg, eb, 5 / 16); spread(x + 1, y + 1, er, eg, eb, 1 / 16); }
+      else [[1, 0], [2, 0], [-1, 1], [0, 1], [1, 1], [0, 2]].forEach(([dx, dy]) => spread(x + dx, y + dy, er, eg, eb, 1 / 8));
+    }
+  }
+  ox.putImageData(od, 0, 0);
+  return { canvas:out, src:out.toDataURL(), counts };
+}
 const loadImg = url => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
 const reduced = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -182,14 +223,19 @@ class App extends React.Component {
       modelQ:'', modelTag:'', modelSort:'recent', modelId:null, delConfirm:false, tagDraft:'',
       feasPal:'all', feasSort:'pct', showCodes:true, feasColor:null, expanded:{}, sel:{},
       drawer:null, shop:null, copied:false, newOpen:false, nm:{ name:'', src:null, file:null }, busy:false,
-      countImg:null, countPts:[], countSize:22, toast:null
+      countImg:null, countPts:[], countSize:22, toast:null,
+      genZoom:null, genGrid:false,
+      genOpen:false, genW:String(saved.genW || GEN_DEFAULT_W), genStock:!!saved.genStock,
+      genPal:PALS.slice().sort((a, b) => b.colors.length - a.colors.length)[0].id
     };
     this.pending = 0; this.queue = Promise.resolve();
+    this.genImgs = {}; this.genCache = new Map();
   }
   componentDidMount() {
     this.onKey = e => {
       if (this.state.screen === 'count' && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); this.countUndo(); }
-      if (e.key === 'Escape') { this.setState({ shop:null, inspOpen:false }); this.closeNM(); this.closeDrawer(); }
+      if (this.state.genZoom && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) { e.preventDefault(); this.stepZoom(e.key === 'ArrowRight' ? 1 : -1); return; }
+      if (e.key === 'Escape') { this.setState({ shop:null, inspOpen:false, genZoom:null }); this.closeNM(); this.closeDrawer(); }
       const tag = (e.target && e.target.tagName) || '';
       if (this.state.screen === 'stock' && !/INPUT|TEXTAREA|SELECT/.test(tag) && !e.metaKey && !e.ctrlKey) {
         const order = this.stockOrder || [], cur = this.state.stockSel && order.includes(this.state.stockSel) ? this.state.stockSel : order[0];
@@ -209,8 +255,8 @@ class App extends React.Component {
   }
   componentWillUnmount() { window.removeEventListener('keydown', this.onKey); window.removeEventListener('resize', this.onResize); }
   componentDidUpdate() {
-    const { screen, theme, feasTab } = this.state;
-    try { localStorage.setItem(LS, JSON.stringify({ screen:screen === 'model' ? 'models' : screen, theme, feasTab })); } catch (e) {}
+    const { screen, theme, feasTab, genW, genStock } = this.state;
+    try { localStorage.setItem(LS, JSON.stringify({ screen:screen === 'model' ? 'models' : screen, theme, feasTab, genW:genWidth(genW), genStock })); } catch (e) {}
     this.syncBody();
   }
   syncBody() { const t = THEMES[this.state.theme]; document.body.style.background = t.bg; document.body.style.color = t.ink; }
@@ -317,7 +363,7 @@ class App extends React.Component {
   }
   toastMsg(m) { clearTimeout(this._tt); this.setState({ toast:m }); this._tt = setTimeout(() => this.setState({ toast:null }), 2600); }
   go(screen, extra) {
-    const apply = more => { this.setState({ screen, drawer:null, delConfirm:false, inspOpen:false, ...extra, ...more }); try { window.scrollTo(0, 0); } catch (e) {} };
+    const apply = more => { this.setState({ screen, drawer:null, delConfirm:false, inspOpen:false, genZoom:null, ...extra, ...more }); try { window.scrollTo(0, 0); } catch (e) {} };
     if (screen === this.state.screen && screen !== 'model') { apply({}); return; }
     if (reduced() || this._pt) { apply({}); return; }
     this._pt = true;
@@ -371,9 +417,11 @@ class App extends React.Component {
     this.toastMsg(`« ${m ? m.name : ''} » réalisé. Perles déduites du stock.`);
   }
   // ----- recettes / modèles -----
-  async fileToRecipe(file, modelId, pal, dith) {
+  // exact : image déjà à une perle par pixel (recette générée), le serveur ne cherche pas d'agrandissement.
+  async fileToRecipe(file, modelId, pal, dith, exact) {
     if (!file) return;
     const fd = new FormData(); fd.append('model_id', modelId); fd.append('list_id', pal); fd.append('dith', dith); fd.append('image', file);
+    if (exact) fd.append('exact', '1');
     this.toastMsg('Analyse de la recette…');
     try {
       const rec = await api('POST', '/api/recipes', fd);
@@ -398,6 +446,28 @@ class App extends React.Component {
     if (persist === 'debounce') { clearTimeout(this._renT); this._renT = setTimeout(send, 500); } else send();
   }
   countUndo() { this.setState(s => ({ countPts:s.countPts.slice(0, -1) })); }
+  // Image d'origine chargée une fois par URL ; le rendu suivant reprend dès qu'elle est prête.
+  genImage(src) {
+    const cur = this.genImgs[src];
+    if (cur && cur !== 'loading') return cur;
+    if (!cur) { this.genImgs[src] = 'loading'; loadImg(src).then(img => { this.genImgs[src] = img; this.setState({ genTick:Date.now() }); }, () => { delete this.genImgs[src]; this.toastMsg("Impossible de lire l'image d'origine"); }); }
+    return null;
+  }
+  genPreview(img, src, W, H, colors, mode) {
+    const key = [src, W, H, colors.map(c => c.code).join(','), mode].join('|');
+    if (!this.genCache.has(key)) {
+      if (this.genCache.size > 48) this.genCache.clear();
+      this.genCache.set(key, ditherImage(sourcePixels(img, W, H), W, H, colors, mode));
+    }
+    return this.genCache.get(key);
+  }
+  stepZoom(dir) {
+    const ids = DITHERS.map(d => d.id), i = ids.indexOf(this.state.genZoom);
+    this.setState({ genZoom:ids[(i + dir + ids.length) % ids.length] });
+  }
+  saveGenerated(prev, modelId, pal, dith) {
+    return new Promise(res => prev.canvas.toBlob(blob => res(this.fileToRecipe(new File([blob], `genere-${dith}.png`, { type:'image/png' }), modelId, pal, dith, true)), 'image/png'));
+  }
 
   chips(defs, cur, key, t) {
     return defs.map(([v, label, n]) => ({ label, n:n === undefined ? '' : n, bg:cur === v ? t.invBg : t.chip, fg:cur === v ? t.invFg : t.ink, go:() => this.setState({ [key]:v }) }));
@@ -623,6 +693,45 @@ class App extends React.Component {
         V.md.cmpCols = `110px repeat(${Math.max(1, vs.length)}, minmax(110px,1fr))`;
         V.md.cmpCells = cmp.flatMap(([lab, vals], ri) => [{ v:lab, font:"'Zen Kaku Gothic New'", col:t.muted, fw:400 }].concat(vals.map(x => ({ v:x, font:ri === 0 ? "'Zen Kaku Gothic New'" : "'DM Mono',monospace", col:ri === 6 && x !== 'Réalisable' ? t.accent : t.ink, fw:ri === 0 ? 500 : 400 }))));
         V.dithHeads = DITHERS;
+        // générateur
+        {
+          const W = genWidth(S.genW), H = Math.max(1, Math.round(W * m.oh / m.ow));
+          const pal = PAL_BY_ID[S.genPal] || PALS[0];
+          const base = pal.colors.filter(c => !TRANSLUCENT.test(c.en));
+          const colors = S.genStock ? base.filter(c => stock[c.code] !== 0 && stock[c.code] !== undefined) : base;
+          const img = S.genOpen ? this.genImage(m.src) : null;
+          const cards = DITHERS.map(dd => {
+            const existing = vs.find(x => x.raw.pal === pal.id && x.raw.dith === dd.id);
+            const card = { id:dd.id, label:dd.label, saveLabel:existing ? 'Remplacer' : 'Enregistrer', ready:false };
+            if (!img || !colors.length) return card;
+            const prev = this.genPreview(img, m.src, W, H, colors, dd.id), f = feas({ counts:prev.counts }, stock);
+            return { ...card, ready:true, src:prev.src, statL:`${Object.keys(prev.counts).length} coul. · ${fmt(f.total)} perles`,
+              pct:f.pct, pctW:f.pct + '%', barCol:f.ok ? t.ink : t.accent, ok:f.ok,
+              save:() => this.saveGenerated(prev, m.id, pal.id, dd.id), zoom:() => this.setState({ genZoom:dd.id }) };
+          });
+          V.gen = {
+            open:S.genOpen, toggle:() => this.setState(s => ({ genOpen:!s.genOpen })),
+            w:S.genW, setW:e => this.setState({ genW:e.target.value }), fixW:() => this.setState({ genW:String(W) }),
+            dimsL:`${W} × ${H} perles · ${plates(W, H)}`, ar:`${W} / ${H}`,
+            palChips:PALS.length > 1 ? this.chips(PALS.map(p => [p.id, p.short]), pal.id, 'genPal', t) : [],
+            stockOn:S.genStock, toggleStock:() => this.setState(s => ({ genStock:!s.genStock })),
+            stockTrack:S.genStock ? t.ink : t.line2, stockKnob:S.genStock ? '15px' : '2px',
+            stockL:S.genStock ? `${colors.length} couleur${colors.length > 1 ? 's' : ''} en stock sur ${base.length}` : `${base.length} couleurs opaques de la palette`,
+            noColors:!colors.length, loading:S.genOpen && !img && colors.length > 0, cards,
+            saveAll:async () => { for (const c of cards) if (c.ready) await c.save(); }
+          };
+          // visionneuse : agrandissement d'un facteur entier pour que toutes les perles aient la même taille
+          const zc = S.genZoom && cards.find(c => c.id === S.genZoom && c.ready);
+          if (zc) {
+            const maxW = (S.vw || window.innerWidth) * .9, maxH = window.innerHeight - 190, fit = Math.min(maxW / W, maxH / H);
+            const k = fit >= 1 ? Math.floor(fit) : fit;
+            V.zoom = { ...zc, palShort:pal.short, dimsL:`${W} × ${H} perles`, w:Math.round(W * k) + 'px', h:Math.round(H * k) + 'px',
+              cell:k + 'px', grid:S.genGrid && k >= 4, canGrid:k >= 4, gridOn:S.genGrid,
+              toggleGrid:() => this.setState(s => ({ genGrid:!s.genGrid })),
+              prev:() => this.stepZoom(-1), next:() => this.stepZoom(1), close:() => this.setState({ genZoom:null }),
+              save:async () => { await zc.save(); } };
+          }
+        }
         V.tagDraft = S.tagDraft; V.setTagDraft = e => this.setState({ tagDraft:e.target.value });
         V.tagKey = e => { if (e.key === 'Enter' && S.tagDraft.trim()) { const g = S.tagDraft.trim().toLowerCase(); if (!m.tags.includes(g)) this.updateModel(m.id, { tags:m.tags.concat(g) }); this.setState({ tagDraft:'' }); } };
       } else { V.isModel = false; setTimeout(() => this.setState({ screen:'models', modelId:null }), 0); }
@@ -806,6 +915,7 @@ function tpl(V) {
   ${V.hasDrawer && tplDrawer(V, t, dot)}
   ${V.shopOpen && tplShop(V, t, dot)}
   ${V.newOpen && tplNewModel(V, t)}
+  ${V.zoom && tplZoom(V, t)}
 
   ${V.hasToast && html`<div style="position:fixed; top:24px; left:50%; transform:translateX(-50%); z-index:60; padding:11px 20px; border-radius:999px; background:${t.invBg}; color:${t.invFg}; font-size:13px; box-shadow:0 16px 30px -12px rgba(0,0,0,.45); max-width:calc(100vw - 32px);">${V.toast}</div>`}
 </div>`;
@@ -1161,6 +1271,7 @@ function tplModel(V, t, panel) {
       <div style="font-size:12px; color:${t.muted};">Image d'origine · ${md.recL}</div>
     </div>
     <div style="display:flex; flex-direction:column; gap:28px; min-width:0;">
+      ${tplGenerator(V, t, panel)}
       <div class="tm-cells" style="display:grid; grid-template-columns:96px repeat(4,minmax(0,1fr)); gap:12px;">
         <div></div>
         ${V.dithHeads.map(d => html`<div key=${d.id} style="font-size:12px; letter-spacing:.06em; color:${t.muted}; padding-bottom:2px;">${d.label}</div>`)}
@@ -1173,7 +1284,7 @@ function tplModel(V, t, panel) {
             <div key=${row.id + c.key} style="min-height:250px; display:flex;">
               ${c.filled && html`
                 <div style="flex:1; ${panel} padding:10px; display:flex; flex-direction:column; gap:8px; min-width:0;">
-                  <div onClick=${c.open} style="cursor:pointer; height:120px; background:#FBFAF6; box-shadow:0 0 0 1px #B8322A; display:flex; align-items:center; justify-content:center;"><img src=${c.src} alt="" style="max-width:100%; max-height:112px; image-rendering:pixelated;" /></div>
+                  <div onClick=${c.open} style="cursor:pointer; height:120px; background:#FBFAF6; box-shadow:0 0 0 1px #B8322A; display:flex; align-items:center; justify-content:center;"><img src=${c.src} alt="" style="width:100%; height:100%; padding:4px; object-fit:contain; image-rendering:pixelated;" /></div>
                   <div style="font-family:'DM Mono',monospace; font-size:11px; color:${t.muted}; line-height:1.5;">${c.dims} · ${c.plates}<br />${c.ncolors} coul. · ${c.totalF} perles</div>
                   <div style="display:flex; align-items:center; gap:8px;">
                     <div style="flex:1; height:3px; background:${t.line};"><div style="height:3px; width:${c.pctW}; background:${c.barCol};"></div></div>
@@ -1203,6 +1314,81 @@ function tplModel(V, t, panel) {
           </div>
         </div>`}
     </div>
+  </div>
+</div>`;
+}
+
+function tplGenerator(V, t, panel) {
+  const g = V.gen;
+  const pill = 'cursor:pointer; white-space:nowrap; padding:6px 12px; border-radius:999px; font-size:12px;';
+  return html`
+<div style="${panel} padding:18px 22px; display:flex; flex-direction:column; gap:16px;">
+  <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+    <div style="display:flex; flex-direction:column; gap:2px;">
+      <div style="font-family:'Shippori Mincho',serif; font-size:22px;">Générer depuis l'image d'origine</div>
+      <div style="font-size:12px; color:${t.muted};">Réduit l'image à la taille voulue et la traduit en perles de la palette, avec chaque dithering.</div>
+    </div>
+    <div onClick=${g.toggle} style="cursor:pointer; white-space:nowrap; padding:9px 16px; border-radius:999px; font-size:13px; ${g.open ? `border:1px solid ${t.line2};` : `background:${t.invBg}; color:${t.invFg};`}">${g.open ? 'Fermer' : 'Générer les recettes →'}</div>
+  </div>
+  ${g.open && html`
+    <div style="display:flex; align-items:center; gap:18px; flex-wrap:wrap; border-top:1px solid ${t.line}; padding-top:14px;">
+      <label style="display:flex; align-items:baseline; gap:8px; font-size:13px;">Largeur
+        <input type="number" min=${GEN_MIN_W} max=${GEN_MAX_W} value=${g.w} onChange=${g.setW} onBlur=${g.fixW} style="width:64px; text-align:center; background:transparent; border:none; border-bottom:1px solid ${t.line2}; padding:4px 0; font-family:'DM Mono',monospace; font-size:15px; color:${t.ink}; outline:none;" />
+        <span style="font-family:'DM Mono',monospace; font-size:12px; color:${t.muted};">${g.dimsL}</span>
+      </label>
+      ${g.palChips.length > 0 && html`<div style="display:flex; gap:4px;">${g.palChips.map(c => html`<div key=${c.label} onClick=${c.go} style="${pill} background:${c.bg}; color:${c.fg};">${c.label}</div>`)}</div>`}
+      <div onClick=${g.toggleStock} style="cursor:pointer; display:flex; align-items:center; gap:8px; font-size:12px;">
+        <div style="width:30px; height:17px; border-radius:999px; background:${g.stockTrack}; position:relative; transition:background .25s; flex:none;"><div style="position:absolute; top:2px; left:${g.stockKnob}; width:13px; height:13px; border-radius:50%; background:${t.panelSolid}; transition:left .25s;"></div></div>
+        <div style="display:flex; flex-direction:column;"><span>Seulement les couleurs en stock</span><span style="color:${t.muted}; font-size:11px;">${g.stockL}</span></div>
+      </div>
+      <div onClick=${g.saveAll} style="margin-left:auto; cursor:pointer; white-space:nowrap; padding:8px 14px; border-radius:999px; font-size:12px; font-weight:500; background:${t.invBg}; color:${t.invFg}; opacity:${g.noColors || g.loading ? .4 : 1};">Tout enregistrer</div>
+    </div>
+    ${g.noColors && html`<div style="font-size:13px; color:${t.accent};">Aucune couleur de cette palette n'est en stock.</div>`}
+    ${g.loading && html`<div style="font-size:13px; color:${t.muted};">Chargement de l'image…</div>`}
+    <div class="tm-gen" style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px;">
+      ${g.cards.map(c => html`
+        <div key=${c.id} style="display:flex; flex-direction:column; gap:8px; min-width:0;">
+          <div style="font-size:12px; letter-spacing:.06em; color:${t.muted};">${c.label}</div>
+          <div onClick=${c.zoom} title="Agrandir" style="height:150px; background:#FBFAF6; box-shadow:0 0 0 1px #B8322A; display:flex; align-items:center; justify-content:center; cursor:${c.ready ? 'zoom-in' : 'default'};">
+            ${c.ready && html`<img src=${c.src} alt=${'Aperçu ' + c.label} style="width:100%; height:100%; padding:4px; object-fit:contain; image-rendering:pixelated;" />`}
+          </div>
+          ${c.ready && html`<div style="font-family:'DM Mono',monospace; font-size:11px; color:${t.muted};">${c.statL}</div>`}
+          ${c.ready && html`
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div style="flex:1; height:3px; background:${t.line};"><div style="height:3px; width:${c.pctW}; background:${c.barCol};"></div></div>
+              <div style="font-family:'DM Mono',monospace; font-size:11px;">${c.pct}%</div>
+            </div>`}
+          ${c.ready && html`<div onClick=${c.save} style="cursor:pointer; text-align:center; padding:7px 10px; border-radius:999px; font-size:12px; border:1px solid ${t.ink};">${c.saveLabel}</div>`}
+        </div>`)}
+    </div>`}
+</div>`;
+}
+
+function tplZoom(V, t) {
+  const z = V.zoom;
+  const btn = 'cursor:pointer; white-space:nowrap; padding:9px 16px; border-radius:999px; font-size:13px;';
+  const arrow = 'cursor:pointer; flex:none; width:44px; height:44px; border-radius:50%; border:1px solid rgba(243,233,216,.4); color:#F3E9D8; display:flex; align-items:center; justify-content:center; font-size:20px;';
+  return html`
+<div onClick=${e => { if (e.target === e.currentTarget) z.close(); }} style="position:fixed; inset:0; z-index:45; background:rgba(10,8,6,.86); backdrop-filter:blur(4px); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; padding:20px;">
+  <div style="width:min(100%, max(${z.w}, 520px)); display:flex; justify-content:space-between; align-items:flex-end; gap:16px; color:#F3E9D8;">
+    <div style="display:flex; flex-direction:column; gap:4px; min-width:0;">
+      <div style="font-size:12px; opacity:.7;">${z.palShort} · ${z.dimsL}</div>
+      <div style="font-family:'Shippori Mincho',serif; font-size:30px; line-height:1.05;">${z.label}</div>
+    </div>
+    <div onClick=${z.close} title="Fermer (Échap)" style="cursor:pointer; font-size:28px; line-height:1; opacity:.8;">×</div>
+  </div>
+  <div style="display:flex; align-items:center; gap:16px; max-width:100%;">
+    <div onClick=${z.prev} title="Dithering précédent (←)" style="${arrow}">‹</div>
+    <div style="position:relative; flex:none; width:${z.w}; height:${z.h}; background:#FBFAF6; box-shadow:0 0 0 2px #B8322A, 0 30px 60px -20px rgba(0,0,0,.7);">
+      <img src=${z.src} alt=${'Aperçu ' + z.label} style="width:100%; height:100%; display:block; image-rendering:pixelated;" />
+      ${z.grid && html`<div style="position:absolute; inset:0; pointer-events:none; background-image:linear-gradient(to right, rgba(26,23,20,.28) 1px, transparent 1px), linear-gradient(to bottom, rgba(26,23,20,.28) 1px, transparent 1px); background-size:${z.cell} ${z.cell};"></div>`}
+    </div>
+    <div onClick=${z.next} title="Dithering suivant (→)" style="${arrow}">›</div>
+  </div>
+  <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap; justify-content:center; color:#F3E9D8; font-size:13px;">
+    <span style="font-family:'DM Mono',monospace; font-size:12px; opacity:.8;">${z.statL} · ${z.pct} % en stock</span>
+    ${z.canGrid && html`<div onClick=${z.toggleGrid} style="${btn} border:1px solid rgba(243,233,216,.4); background:${z.gridOn ? '#F3E9D8' : 'transparent'}; color:${z.gridOn ? '#1A1714' : '#F3E9D8'};">Grille</div>`}
+    <div onClick=${z.save} style="${btn} font-weight:500; background:#F3E9D8; color:#1A1714;">${z.saveLabel}</div>
   </div>
 </div>`;
 }
