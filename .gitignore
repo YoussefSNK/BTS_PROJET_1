@@ -2,3 +2,5 @@ static/images
 database.db
 __pycache__
 venv/
+database/
+.mcp.json
