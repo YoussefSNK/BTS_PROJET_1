@@ -121,6 +121,43 @@ const GEN_DEFAULT_W = 58, GEN_MIN_W = 4, GEN_MAX_W = 200;
 const genWidth = v => Math.min(GEN_MAX_W, Math.max(GEN_MIN_W, parseInt(v, 10) || GEN_DEFAULT_W));
 const TRANSLUCENT = /Transparent|Clear|Translucent/i;
 const BAYER = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
+// Distances entre couleurs : mêmes formules que routes/color_metrics.py côté serveur.
+const srgbLin = v => { v /= 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+function rgbToOklab(rgb) {
+  const r = srgbLin(rgb[0]), g = srgbLin(rgb[1]), b = srgbLin(rgb[2]);
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b), m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b), s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  return [0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s, 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s, 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s];
+}
+function rgbToLab(rgb) {
+  const r = srgbLin(rgb[0]), g = srgbLin(rgb[1]), b = srgbLin(rgb[2]);
+  const f = t => t > 216 / 24389 ? Math.cbrt(t) : (24389 / 27 * t + 16) / 116;
+  const fx = f((0.4124564 * r + 0.3575761 * g + 0.1804375 * b) / 0.95047), fy = f(0.2126729 * r + 0.7151522 * g + 0.0721750 * b), fz = f((0.0193339 * r + 0.1191920 * g + 0.9503041 * b) / 1.08883);
+  return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
+}
+const RAD = Math.PI / 180, P25_7 = 25 ** 7;
+// Delta E 2000 (Sharma, Wu & Dalal 2005), kL = kC = kH = 1.
+function ciede2000(p, q) {
+  const [L1, a1, b1] = p, [L2, a2, b2] = q;
+  const cBar = (Math.hypot(a1, b1) + Math.hypot(a2, b2)) / 2, g = .5 * (1 - Math.sqrt(cBar ** 7 / (cBar ** 7 + P25_7)));
+  const a1p = a1 * (1 + g), a2p = a2 * (1 + g), c1p = Math.hypot(a1p, b1), c2p = Math.hypot(a2p, b2);
+  const h1p = c1p ? (Math.atan2(b1, a1p) / RAD + 360) % 360 : 0, h2p = c2p ? (Math.atan2(b2, a2p) / RAD + 360) % 360 : 0;
+  const dLp = L2 - L1, dCp = c2p - c1p, zero = c1p * c2p === 0, dh = h2p - h1p;
+  const dhp = zero ? 0 : Math.abs(dh) <= 180 ? dh : dh > 180 ? dh - 360 : dh + 360;
+  const dHp = 2 * Math.sqrt(c1p * c2p) * Math.sin(dhp / 2 * RAD);
+  const lpBar = (L1 + L2) / 2, cpBar = (c1p + c2p) / 2;
+  const hpBar = zero ? h1p + h2p : Math.abs(h1p - h2p) <= 180 ? (h1p + h2p) / 2 : h1p + h2p < 360 ? (h1p + h2p + 360) / 2 : (h1p + h2p - 360) / 2;
+  const T = 1 - .17 * Math.cos((hpBar - 30) * RAD) + .24 * Math.cos(2 * hpBar * RAD) + .32 * Math.cos((3 * hpBar + 6) * RAD) - .2 * Math.cos((4 * hpBar - 63) * RAD);
+  const dTheta = 30 * Math.exp(-(((hpBar - 275) / 25) ** 2)), rC = 2 * Math.sqrt(cpBar ** 7 / (cpBar ** 7 + P25_7));
+  const sL = 1 + .015 * (lpBar - 50) ** 2 / Math.sqrt(20 + (lpBar - 50) ** 2), sC = 1 + .045 * cpBar, sH = 1 + .015 * cpBar * T, rT = -Math.sin(2 * dTheta * RAD) * rC;
+  return Math.sqrt((dLp / sL) ** 2 + (dCp / sC) ** 2 + (dHp / sH) ** 2 + rT * (dCp / sC) * (dHp / sH));
+}
+const sq3 = (p, q) => (p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2 + (p[2] - q[2]) ** 2;
+const METRICS = {
+  weighted:{ label:'RGB pondérée', prepare:rgb => rgb, distance:(p, q) => 2 * (p[0] - q[0]) ** 2 + 4 * (p[1] - q[1]) ** 2 + 3 * (p[2] - q[2]) ** 2 },
+  oklab:{ label:'OKLab', prepare:rgbToOklab, distance:sq3 },
+  ciede2000:{ label:'CIEDE2000', prepare:rgbToLab, distance:ciede2000 }
+};
+const DEFAULT_METRIC = 'weighted';
 // Réduction par paliers de moitié : un seul drawImage d'une grande image vers 58 px crénèle beaucoup.
 function sourcePixels(img, W, H) {
   let c = mk(img.naturalWidth, img.naturalHeight); c.getContext('2d').drawImage(img, 0, 0);
@@ -132,20 +169,30 @@ function sourcePixels(img, W, H) {
   return ox.getImageData(0, 0, W, H).data;
 }
 // Une perle par pixel ; les pixels transparents (alpha < 128) restent sans perle et ne diffusent pas d'erreur.
-function ditherImage(data, W, H, colors, mode) {
+function ditherImage(data, W, H, colors, mode, metric) {
   const n = W * H, buf = new Float32Array(n * 3), solid = new Uint8Array(n);
   for (let i = 0; i < n; i++) { buf[i * 3] = data[i * 4]; buf[i * 3 + 1] = data[i * 4 + 1]; buf[i * 3 + 2] = data[i * 4 + 2]; solid[i] = data[i * 4 + 3] >= 128 ? 1 : 0; }
   const out = mk(W, H), ox = out.getContext('2d'), od = ox.createImageData(W, H), counts = {};
   const spread = (x, y, er, eg, eb, f) => { if (x < 0 || x >= W || y >= H) return; const j = y * W + x; if (!solid[j]) return; buf[j * 3] += er * f; buf[j * 3 + 1] += eg * f; buf[j * 3 + 2] += eb * f; };
   const clamp = v => v < 0 ? 0 : v > 255 ? 255 : v;
+  // Couleurs de la palette converties une fois ; cache par couleur arrondie (la diffusion d'erreur en recrée beaucoup).
+  const M = METRICS[metric] || METRICS[DEFAULT_METRIC], prepared = colors.map(c => M.prepare(c.rgb)), memo = new Map();
+  const nearest = (r, g, b) => {
+    const key = (Math.round(r) << 16) | (Math.round(g) << 8) | Math.round(b);
+    let best = memo.get(key);
+    if (best === undefined) {
+      const p = M.prepare([Math.round(r), Math.round(g), Math.round(b)]); let bd = Infinity;
+      for (let k = 0; k < prepared.length; k++) { const d = M.distance(p, prepared[k]); if (d < bd) { bd = d; best = k; } }
+      memo.set(key, best);
+    }
+    return best;
+  };
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const i = y * W + x; if (!solid[i]) continue;
     let r = buf[i * 3], g = buf[i * 3 + 1], b = buf[i * 3 + 2];
     if (mode === 'ordered') { const t = (BAYER[y % 4][x % 4] / 16 - .47) * 56; r += t; g += t; b += t; }
     r = clamp(r); g = clamp(g); b = clamp(b);
-    let best = 0, bd = Infinity;
-    for (let k = 0; k < colors.length; k++) { const c = colors[k].rgb, d = 2 * (r - c[0]) ** 2 + 4 * (g - c[1]) ** 2 + 3 * (b - c[2]) ** 2; if (d < bd) { bd = d; best = k; } }
-    const c = colors[best]; counts[c.code] = (counts[c.code] || 0) + 1;
+    const c = colors[nearest(r, g, b)]; counts[c.code] = (counts[c.code] || 0) + 1;
     od.data[i * 4] = c.rgb[0]; od.data[i * 4 + 1] = c.rgb[1]; od.data[i * 4 + 2] = c.rgb[2]; od.data[i * 4 + 3] = 255;
     if (mode === 'floyd_steinberg' || mode === 'atkinson') {
       const er = r - c.rgb[0], eg = g - c.rgb[1], eb = b - c.rgb[2];
@@ -225,7 +272,7 @@ class App extends React.Component {
       drawer:null, shop:null, copied:false, newOpen:false, nm:{ name:'', src:null, file:null }, busy:false,
       countImg:null, countPts:[], countSize:22, toast:null,
       genZoom:null, genGrid:false,
-      genOpen:false, genW:String(saved.genW || GEN_DEFAULT_W), genStock:!!saved.genStock,
+      genOpen:false, genW:String(saved.genW || GEN_DEFAULT_W), genStock:!!saved.genStock, genMetric:METRICS[saved.genMetric] ? saved.genMetric : DEFAULT_METRIC,
       genPal:PALS.slice().sort((a, b) => b.colors.length - a.colors.length)[0].id
     };
     this.pending = 0; this.queue = Promise.resolve();
@@ -255,8 +302,8 @@ class App extends React.Component {
   }
   componentWillUnmount() { window.removeEventListener('keydown', this.onKey); window.removeEventListener('resize', this.onResize); }
   componentDidUpdate() {
-    const { screen, theme, feasTab, genW, genStock } = this.state;
-    try { localStorage.setItem(LS, JSON.stringify({ screen:screen === 'model' ? 'models' : screen, theme, feasTab, genW:genWidth(genW), genStock })); } catch (e) {}
+    const { screen, theme, feasTab, genW, genStock, genMetric } = this.state;
+    try { localStorage.setItem(LS, JSON.stringify({ screen:screen === 'model' ? 'models' : screen, theme, feasTab, genW:genWidth(genW), genStock, genMetric })); } catch (e) {}
     this.syncBody();
   }
   syncBody() { const t = THEMES[this.state.theme]; document.body.style.background = t.bg; document.body.style.color = t.ink; }
@@ -422,6 +469,7 @@ class App extends React.Component {
     if (!file) return;
     const fd = new FormData(); fd.append('model_id', modelId); fd.append('list_id', pal); fd.append('dith', dith); fd.append('image', file);
     if (exact) fd.append('exact', '1');
+    fd.append('metric', this.state.genMetric);
     this.toastMsg('Analyse de la recette…');
     try {
       const rec = await api('POST', '/api/recipes', fd);
@@ -453,11 +501,11 @@ class App extends React.Component {
     if (!cur) { this.genImgs[src] = 'loading'; loadImg(src).then(img => { this.genImgs[src] = img; this.setState({ genTick:Date.now() }); }, () => { delete this.genImgs[src]; this.toastMsg("Impossible de lire l'image d'origine"); }); }
     return null;
   }
-  genPreview(img, src, W, H, colors, mode) {
-    const key = [src, W, H, colors.map(c => c.code).join(','), mode].join('|');
+  genPreview(img, src, W, H, colors, mode, metric) {
+    const key = [src, W, H, colors.map(c => c.code).join(','), mode, metric].join('|');
     if (!this.genCache.has(key)) {
       if (this.genCache.size > 48) this.genCache.clear();
-      this.genCache.set(key, ditherImage(sourcePixels(img, W, H), W, H, colors, mode));
+      this.genCache.set(key, ditherImage(sourcePixels(img, W, H), W, H, colors, mode, metric));
     }
     return this.genCache.get(key);
   }
@@ -704,7 +752,7 @@ class App extends React.Component {
             const existing = vs.find(x => x.raw.pal === pal.id && x.raw.dith === dd.id);
             const card = { id:dd.id, label:dd.label, saveLabel:existing ? 'Remplacer' : 'Enregistrer', ready:false };
             if (!img || !colors.length) return card;
-            const prev = this.genPreview(img, m.src, W, H, colors, dd.id), f = feas({ counts:prev.counts }, stock);
+            const prev = this.genPreview(img, m.src, W, H, colors, dd.id, S.genMetric), f = feas({ counts:prev.counts }, stock);
             return { ...card, ready:true, src:prev.src, statL:`${Object.keys(prev.counts).length} coul. · ${fmt(f.total)} perles`,
               pct:f.pct, pctW:f.pct + '%', barCol:f.ok ? t.ink : t.accent, ok:f.ok,
               save:() => this.saveGenerated(prev, m.id, pal.id, dd.id), zoom:() => this.setState({ genZoom:dd.id }) };
@@ -714,6 +762,7 @@ class App extends React.Component {
             w:S.genW, setW:e => this.setState({ genW:e.target.value }), fixW:() => this.setState({ genW:String(W) }),
             dimsL:`${W} × ${H} perles · ${plates(W, H)}`, ar:`${W} / ${H}`,
             palChips:PALS.length > 1 ? this.chips(PALS.map(p => [p.id, p.short]), pal.id, 'genPal', t) : [],
+            metricChips:this.chips(Object.entries(METRICS).map(([k, x]) => [k, x.label]), S.genMetric, 'genMetric', t),
             stockOn:S.genStock, toggleStock:() => this.setState(s => ({ genStock:!s.genStock })),
             stockTrack:S.genStock ? t.ink : t.line2, stockKnob:S.genStock ? '15px' : '2px',
             stockL:S.genStock ? `${colors.length} couleur${colors.length > 1 ? 's' : ''} en stock sur ${base.length}` : `${base.length} couleurs opaques de la palette`,
@@ -725,7 +774,7 @@ class App extends React.Component {
           if (zc) {
             const maxW = (S.vw || window.innerWidth) * .9, maxH = window.innerHeight - 190, fit = Math.min(maxW / W, maxH / H);
             const k = fit >= 1 ? Math.floor(fit) : fit;
-            V.zoom = { ...zc, palShort:pal.short, dimsL:`${W} × ${H} perles`, w:Math.round(W * k) + 'px', h:Math.round(H * k) + 'px',
+            V.zoom = { ...zc, palShort:pal.short + ' · ' + METRICS[S.genMetric].label, dimsL:`${W} × ${H} perles`, w:Math.round(W * k) + 'px', h:Math.round(H * k) + 'px',
               cell:k + 'px', grid:S.genGrid && k >= 4, canGrid:k >= 4, gridOn:S.genGrid,
               toggleGrid:() => this.setState(s => ({ genGrid:!s.genGrid })),
               prev:() => this.stepZoom(-1), next:() => this.stepZoom(1), close:() => this.setState({ genZoom:null }),
@@ -1337,6 +1386,10 @@ function tplGenerator(V, t, panel) {
         <span style="font-family:'DM Mono',monospace; font-size:12px; color:${t.muted};">${g.dimsL}</span>
       </label>
       ${g.palChips.length > 0 && html`<div style="display:flex; gap:4px;">${g.palChips.map(c => html`<div key=${c.label} onClick=${c.go} style="${pill} background:${c.bg}; color:${c.fg};">${c.label}</div>`)}</div>`}
+      <div style="display:flex; gap:4px; align-items:center;" title="Méthode de calcul de la couleur de perle la plus proche">
+        <span style="font-size:12px; color:${t.muted}; margin-right:4px;">Distance</span>
+        ${g.metricChips.map(c => html`<div key=${c.label} onClick=${c.go} style="${pill} background:${c.bg}; color:${c.fg};">${c.label}</div>`)}
+      </div>
       <div onClick=${g.toggleStock} style="cursor:pointer; display:flex; align-items:center; gap:8px; font-size:12px;">
         <div style="width:30px; height:17px; border-radius:999px; background:${g.stockTrack}; position:relative; transition:background .25s; flex:none;"><div style="position:absolute; top:2px; left:${g.stockKnob}; width:13px; height:13px; border-radius:50%; background:${t.panelSolid}; transition:left .25s;"></div></div>
         <div style="display:flex; flex-direction:column;"><span>Seulement les couleurs en stock</span><span style="color:${t.muted}; font-size:11px;">${g.stockL}</span></div>

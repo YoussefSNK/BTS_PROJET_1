@@ -15,6 +15,8 @@ from flask import Blueprint, current_app, jsonify, redirect, render_template, re
 from PIL import Image
 from werkzeug.utils import secure_filename
 
+from routes.color_metrics import DEFAULT_METRIC, METRICS, nearest_finder
+
 
 tama_bp = Blueprint('tama_bp', __name__)
 
@@ -122,13 +124,14 @@ def block_size(lines):
     return max(size, 1)
 
 
-def analyse_recipe(path, palette, detect_scale=True):
+def analyse_recipe(path, palette, detect_scale=True, metric=DEFAULT_METRIC):
     """Retourne (largeur, hauteur, {code: quantite}) en perles.
 
     Une recette est souvent exportee agrandie (chaque perle = un carre de N x N pixels) :
     on detecte ce facteur, on ramene l'image a une perle par pixel, puis chaque couleur
     est associee a la couleur la plus proche de la palette. Les pixels transparents sont ignores.
     `detect_scale=False` pour une image deja a une perle par pixel (recette generee par l'app).
+    `metric` : distance utilisee (voir routes/color_metrics.py).
     """
     with Image.open(path) as source:
         img = source.convert('RGBA')
@@ -142,12 +145,13 @@ def analyse_recipe(path, palette, detect_scale=True):
         img = img.resize((width // bx, height // by), Image.Resampling.NEAREST)
         width, height = img.size
 
-    rgb_palette = [(code, tuple(int(hex_code[i:i + 2], 16) for i in (1, 3, 5))) for code, hex_code in palette]
+    nearest = nearest_finder(
+        [(code, tuple(int(hex_code[i:i + 2], 16) for i in (1, 3, 5))) for code, hex_code in palette], metric)
     counts = {}
     for count, (r, g, b, a) in img.getcolors(maxcolors=width * height) or []:
         if a < 128:
             continue
-        code = min(rgb_palette, key=lambda p: (p[1][0] - r) ** 2 + (p[1][1] - g) ** 2 + (p[1][2] - b) ** 2)[0]
+        code = nearest((r, g, b))
         counts[code] = counts.get(code, 0) + count
     return width, height, counts
 
@@ -450,6 +454,9 @@ def create_recipe():
     list_id = request.form.get('list_id', type=int)
     dithering = request.form.get('dith')
     exact = request.form.get('exact') == '1'
+    metric = request.form.get('metric') or DEFAULT_METRIC
+    if metric not in METRICS:
+        return error('Méthode de distance invalide.')
     if dithering not in DITHERING_TYPES:
         return error('Type de dithering invalide.')
     file, err = get_file()
@@ -476,7 +483,7 @@ def create_recipe():
     recipe_id = cursor.lastrowid
     filename = save_upload(file, f'recipe_{recipe_id}')
     try:
-        width, height, counts = analyse_recipe(upload_path(filename), palette, detect_scale=not exact)
+        width, height, counts = analyse_recipe(upload_path(filename), palette, detect_scale=not exact, metric=metric)
     except OSError:
         conn.rollback()
         conn.close()
