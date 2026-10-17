@@ -477,15 +477,18 @@ class App extends React.Component {
       this.toastMsg(`Recette ${dithLabel(dith)} enregistrée (${rec.w} × ${rec.h} perles)`);
     } catch (err) { this.fail(err); }
   }
+  // Suppression en deux clics : le premier arme la confirmation pendant quelques secondes.
   async removeRecipe(r) {
+    if (this.state.recipeDel !== r.id) {
+      clearTimeout(this._rdT); this.setState({ recipeDel:r.id });
+      this._rdT = setTimeout(() => this.setState({ recipeDel:null }), 4000);
+      return;
+    }
+    clearTimeout(this._rdT); this.setState({ recipeDel:null });
     try {
-      const res = await api('DELETE', `/api/recipes/${r.id}`);
-      this.setState(s => {
-        const recipes = s.recipes.filter(x => x.id !== r.id);
-        if (res.modelDeleted) return { recipes, models:s.models.filter(m => m.id !== r.modelId), screen:'models', modelId:null, drawer:null };
-        return { recipes, drawer:null };
-      });
-      if (res.modelDeleted) this.toastMsg('Dernière recette supprimée : le modèle aussi.');
+      await api('DELETE', `/api/recipes/${r.id}`);
+      this.setState(s => ({ recipes:s.recipes.filter(x => x.id !== r.id), drawer:null }));
+      this.toastMsg(`Recette ${dithLabel(r.dith)} supprimée`);
     } catch (err) { this.fail(err); }
   }
   updateModel(id, patch, persist) {
@@ -733,7 +736,7 @@ class App extends React.Component {
           },
           rows:PALS.map(p => ({ id:p.id, short:p.short, n:p.colors.length, cells:DITHERS.map(dd => {
             const v = vs.find(x => x.raw.pal === p.id && x.raw.dith === dd.id), onFile = e => { const f = e.target.files[0]; e.target.value = ''; this.fileToRecipe(f, m.id, p.id, dd.id); };
-            return v ? { ...v, key:dd.id, filled:true, empty:false, onFile, remove:() => this.removeRecipe(v.raw) } : { key:dd.id, filled:false, empty:true, onFile };
+            return v ? { ...v, key:dd.id, filled:true, empty:false, onFile, remove:() => this.removeRecipe(v.raw), delLabel:S.recipeDel === v.id ? 'Confirmer ?' : 'Supprimer', delW:S.recipeDel === v.id ? 600 : 400 } : { key:dd.id, filled:false, empty:true, onFile };
           }) }))
         };
         const cmp = [['', vs.map(v => v.dithLabel)], ['Taille', vs.map(v => v.dims)], ['Plaques', vs.map(v => v.plates)], ['Couleurs', vs.map(v => String(v.ncolors))], ['Perles', vs.map(v => v.totalF)], ['Complétion', vs.map(v => v.pct + ' %')], ['Statut', vs.map(v => v.ok ? 'Réalisable' : v.missing ? `−${fmt(v.missing)}` : 'À vérifier')]];
@@ -1342,7 +1345,7 @@ function tplModel(V, t, panel) {
                   <div style="margin-top:auto; display:flex; justify-content:space-between; gap:6px; font-size:11px;">
                     <div onClick=${c.open} style="cursor:pointer; color:${t.ink};">Détail</div>
                     <label style="position:relative; cursor:pointer; color:${t.muted};">Remplacer<input type="file" accept="image/png,image/*" onChange=${c.onFile} style="position:absolute; inset:0; opacity:0; cursor:pointer; width:100%;" /></label>
-                    <div onClick=${c.remove} style="cursor:pointer; color:${t.accent};">Supprimer</div>
+                    <div onClick=${c.remove} style="cursor:pointer; color:${t.accent}; font-weight:${c.delW};">${c.delLabel}</div>
                   </div>
                 </div>`}
               ${c.empty && html`

@@ -503,7 +503,7 @@ def create_recipe():
 @tama_bp.route('/api/recipes/<int:recipe_id>', methods=['DELETE'])
 @api_login_required
 def delete_recipe(recipe_id):
-    """Supprime une recette ; le modele part aussi s'il n'a plus de recette (comme avant la refonte)."""
+    """Supprime une recette. Le modele est conserve, meme sans recette (on peut en regenerer)."""
     user_id = session['user_id']
     conn = connect()
     cursor = conn.cursor()
@@ -515,10 +515,6 @@ def delete_recipe(recipe_id):
         return error('Recette introuvable', 404)
 
     delete_recipe_rows(cursor, recipe)
-    model_deleted = False
-    if cursor.execute('SELECT COUNT(*) FROM Recipe WHERE model_id = ?', (recipe['model_id'],)).fetchone()[0] == 0:
-        delete_model_rows(cursor, owned_model(cursor, recipe['model_id'], user_id))
-        model_deleted = True
     conn.commit()
     conn.close()
-    return jsonify(ok=True, modelDeleted=model_deleted)
+    return jsonify(ok=True)
