@@ -211,8 +211,12 @@ def recipe_json(cursor, row):
         width, height = image_size(row['image_path'])
     counts = {c['code']: c['quantity'] for c in cursor.execute(
         'SELECT code, quantity FROM RecipeColors WHERE recipe_id = ?', (row['id'],))}
+    stock_only = row['stock_only']
     return {'id': row['id'], 'modelId': row['model_id'], 'pal': row['list_id'], 'dith': row['dithering_type'],
-            'src': image_url(row['image_path']), 'w': width, 'h': height, 'counts': counts}
+            'src': image_url(row['image_path']), 'w': width, 'h': height, 'counts': counts,
+            # Origine : None pour les recettes creees avant que l'app ne l'enregistre.
+            'source': row['source'], 'metric': row['metric'],
+            'stockOnly': None if stock_only is None else bool(stock_only)}
 
 
 def owned_model(cursor, model_id, user_id):
@@ -448,13 +452,32 @@ def delete_model(model_id):
 @tama_bp.route('/api/recipes', methods=['POST'])
 @api_login_required
 def create_recipe():
-    """Ajoute (ou remplace) la recette d'une case modele x palette x dithering."""
+    """Ajoute une recette a un modele.
+
+    Formulaire : model_id, list_id, dith, metric, image, et
+    - source=generated + stock_only=1|0 : recette produite par le generateur (une perle par pixel).
+      Elle remplace la recette generee ayant exactement les memes reglages (palette, dithering,
+      distance, couleurs possedees ou toutes) ; d'autres reglages s'ajoutent a cote.
+    - source=imported (defaut) : image deposee, analysee avec la distance `metric`. Elle s'ajoute.
+    - replace_id (optionnel) : recette du meme modele a remplacer explicitement.
+    - keep_existing=1 (optionnel) : ajoute sans remplacer, meme si une recette a les memes reglages
+      (le stock a pu changer depuis : memes reglages, couleurs differentes).
+    """
     user_id = session['user_id']
     model_id = request.form.get('model_id', type=int)
     list_id = request.form.get('list_id', type=int)
     dithering = request.form.get('dith')
-    exact = request.form.get('exact') == '1'
+    source = request.form.get('source') or 'imported'
     metric = request.form.get('metric') or DEFAULT_METRIC
+    replace_id = request.form.get('replace_id', type=int)
+    keep_existing = request.form.get('keep_existing') == '1'
+    if source not in ('generated', 'imported'):
+        return error('Origine de recette invalide.')
+    stock_only = None
+    if source == 'generated':
+        if request.form.get('stock_only') not in ('0', '1'):
+            return error('Préciser stock_only pour une recette générée.')
+        stock_only = int(request.form['stock_only'])
     if metric not in METRICS:
         return error('Méthode de distance invalide.')
     if dithering not in DITHERING_TYPES:
@@ -474,16 +497,28 @@ def create_recipe():
         conn.close()
         return error('Liste de couleurs invalide.')
 
-    for old in cursor.execute('SELECT * FROM Recipe WHERE model_id = ? AND list_id = ? AND dithering_type = ?',
-                              (model_id, list_id, dithering)).fetchall():
+    replaced = []
+    if replace_id:
+        replaced = cursor.execute('SELECT * FROM Recipe WHERE id = ? AND model_id = ?', (replace_id, model_id)).fetchall()
+        if not replaced:
+            conn.close()
+            return error('Recette à remplacer introuvable', 404)
+    elif source == 'generated' and not keep_existing:
+        replaced = cursor.execute('''
+            SELECT * FROM Recipe WHERE model_id = ? AND list_id = ? AND dithering_type = ?
+              AND source = 'generated' AND metric = ? AND stock_only = ?
+        ''', (model_id, list_id, dithering, metric, stock_only)).fetchall()
+    for old in replaced:
         delete_recipe_rows(cursor, old)
 
-    cursor.execute("INSERT INTO Recipe (model_id, list_id, dithering_type, image_path) VALUES (?, ?, ?, '')",
-                   (model_id, list_id, dithering))
+    cursor.execute('''
+        INSERT INTO Recipe (model_id, list_id, dithering_type, image_path, source, metric, stock_only)
+        VALUES (?, ?, ?, '', ?, ?, ?)
+    ''', (model_id, list_id, dithering, source, metric, stock_only))
     recipe_id = cursor.lastrowid
     filename = save_upload(file, f'recipe_{recipe_id}')
     try:
-        width, height, counts = analyse_recipe(upload_path(filename), palette, detect_scale=not exact, metric=metric)
+        width, height, counts = analyse_recipe(upload_path(filename), palette, detect_scale=source != 'generated', metric=metric)
     except OSError:
         conn.rollback()
         conn.close()

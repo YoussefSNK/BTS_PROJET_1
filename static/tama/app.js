@@ -110,6 +110,14 @@ function parseCmd(text) {
 const DITHERS = [{ id:'none', label:'Aucun' }, { id:'atkinson', label:'Atkinson' }, { id:'floyd_steinberg', label:'Floyd-Steinberg' }, { id:'ordered', label:'Ordonné (Bayer)' }];
 const dithLabel = id => (DITHERS.find(d => d.id === id) || { label:id }).label;
 const palShort = id => (PAL_BY_ID[id] || { short:'?' }).short;
+const metricLabel = id => (METRICS[id] || { label:'distance ?' }).label;
+// Comment la recette a été obtenue : distance + couleurs possédées / toutes, ou image importée.
+function originTags(r) {
+  if (r.source === 'generated') return [metricLabel(r.metric), r.stockOnly ? 'couleurs possédées' : 'toutes les couleurs'];
+  if (r.source === 'imported') return ['importée', metricLabel(r.metric)];
+  return ['origine non précisée'];
+}
+const originLabel = r => originTags(r).join(' · ');
 const ring = hex => `radial-gradient(circle, transparent 0 25%, ${hex} 27%)`;
 const fmt = n => Number(n).toLocaleString('fr-FR');
 const plates = (w, hh) => { const n = Math.ceil(w / 29) * Math.ceil(hh / 29); return n + (n > 1 ? ' plaques' : ' plaque'); };
@@ -465,15 +473,21 @@ class App extends React.Component {
   }
   // ----- recettes / modèles -----
   // exact : image déjà à une perle par pixel (recette générée), le serveur ne cherche pas d'agrandissement.
-  async fileToRecipe(file, modelId, pal, dith, exact) {
+  // opts.generated : { stockOnly } pour une recette du générateur (une perle par pixel) ; opts.replaceId : recette remplacée.
+  // Une recette générée remplace celle qui a exactement les mêmes réglages (même règle que le serveur).
+  async fileToRecipe(file, modelId, pal, dith, opts = {}) {
     if (!file) return;
+    const metric = this.state.genMetric, gen = opts.generated;
     const fd = new FormData(); fd.append('model_id', modelId); fd.append('list_id', pal); fd.append('dith', dith); fd.append('image', file);
-    if (exact) fd.append('exact', '1');
-    fd.append('metric', this.state.genMetric);
+    fd.append('metric', metric); fd.append('source', gen ? 'generated' : 'imported');
+    if (gen) fd.append('stock_only', gen.stockOnly ? '1' : '0');
+    if (opts.replaceId) fd.append('replace_id', opts.replaceId);
+    if (opts.add) fd.append('keep_existing', '1');
     this.toastMsg('Analyse de la recette…');
     try {
       const rec = await api('POST', '/api/recipes', fd);
-      this.setState(s => ({ recipes:s.recipes.filter(r => !(r.modelId === modelId && r.pal === pal && r.dith === dith)).concat(rec) }));
+      const replaced = r => r.id === opts.replaceId || (gen && !opts.replaceId && !opts.add && r.modelId === modelId && r.pal === pal && r.dith === dith && r.source === 'generated' && r.metric === metric && r.stockOnly === !!gen.stockOnly);
+      this.setState(s => ({ recipes:s.recipes.filter(r => !replaced(r)).concat(rec) }));
       this.toastMsg(`Recette ${dithLabel(dith)} enregistrée (${rec.w} × ${rec.h} perles)`);
     } catch (err) { this.fail(err); }
   }
@@ -516,8 +530,9 @@ class App extends React.Component {
     const ids = DITHERS.map(d => d.id), i = ids.indexOf(this.state.genZoom);
     this.setState({ genZoom:ids[(i + dir + ids.length) % ids.length] });
   }
-  saveGenerated(prev, modelId, pal, dith) {
-    return new Promise(res => prev.canvas.toBlob(blob => res(this.fileToRecipe(new File([blob], `genere-${dith}.png`, { type:'image/png' }), modelId, pal, dith, true)), 'image/png'));
+  // how : { add:true } garde les recettes existantes, { replaceId } en remplace une précise.
+  saveGenerated(prev, modelId, pal, dith, how = {}) {
+    return new Promise(res => prev.canvas.toBlob(blob => res(this.fileToRecipe(new File([blob], `genere-${dith}.png`, { type:'image/png' }), modelId, pal, dith, { generated:{ stockOnly:this.state.genStock }, ...how })), 'image/png'));
   }
 
   chips(defs, cur, key, t) {
@@ -528,7 +543,7 @@ class App extends React.Component {
     const rows = f.rows.map(n => { const c = info(n.code, r.pal); return { code:n.code, name:c.name, ring:ring(c.hex), needF:fmt(n.need), haveL:n.unknown ? '?' : fmt(n.have), col:n.miss ? t.accent : n.unknown ? t.muted : t.ink }; });
     const missRows = f.rows.filter(n => n.miss).sort((a, b) => b.miss - a.miss);
     return {
-      id:r.id, src:r.src, ar:`${r.w} / ${r.h}`, modelName:m.name, palShort:palShort(r.pal), dithLabel:dithLabel(r.dith) + (PALS.length > 1 ? ' · ' + palShort(r.pal) : ''), dims:`${r.w} × ${r.h}`, plates:plates(r.w, r.h),
+      id:r.id, src:r.src, ar:`${r.w} / ${r.h}`, modelName:m.name, palShort:palShort(r.pal), dithLabel:dithLabel(r.dith) + (PALS.length > 1 ? ' · ' + palShort(r.pal) : '') + ' · ' + originLabel(r), origin:originTags(r), dims:`${r.w} × ${r.h}`, plates:plates(r.w, r.h),
       ncolors:Object.keys(r.counts).length, totalF:fmt(f.total), total:f.total, pct:f.pct, pctW:f.pct + '%', pctOptW:f.pctOpt + '%', pctOpt:f.pctOpt,
       optL:f.unknown ? `jusqu'à ${f.pctOpt} % (${f.unknown} inconnue${f.unknown > 1 ? 's' : ''})` : '', ok:f.ok, almost:f.almost, missing:f.missing,
       missingL:f.missing ? '−' + fmt(f.missing) : (f.unknown ? '?' : '✓'), missSub:f.missing ? `${f.missCols} couleur${f.missCols > 1 ? 's' : ''}` : (f.unknown ? 'à vérifier' : 'complet'),
@@ -665,7 +680,7 @@ class App extends React.Component {
       const c = info(sel), s0 = stock[sel], unk = s0 === null, v = unk ? 0 : (s0 || 0), zero = !unk && v === 0, mx = maxNeed[sel] || 0;
       const set = x => this.setQty(sel, x);
       const usesR = S.recipes.filter(r => r.counts[sel]).map(r => { const m = S.models.find(x => x.id === r.modelId) || { name:'?' }, need = r.counts[sel], ok = !unk && v >= need;
-        return { id:r.id, src:r.src, name:m.name, dith:dithLabel(r.dith), needL:unk ? fmt(need) + ' · ?' : ok ? fmt(need) + ' ✓' : `${fmt(need)} · −${fmt(need - v)}`, col:unk ? t.muted : ok ? t.ink : t.accent, need, open:() => this.openDrawer(r.id) }; }).sort((a, b) => b.need - a.need);
+        return { id:r.id, src:r.src, name:m.name, dith:dithLabel(r.dith) + ' · ' + originLabel(r), needL:unk ? fmt(need) + ' · ?' : ok ? fmt(need) + ' ✓' : `${fmt(need)} · −${fmt(need - v)}`, col:unk ? t.muted : ok ? t.ink : t.accent, need, open:() => this.openDrawer(r.id) }; }).sort((a, b) => b.need - a.need);
       const lab = x => x === null ? '?' : fmt(x || 0);
       const ih = S.hist.filter(hh => hh.code === sel).slice(0, 4).map(hh => ({ id:hh.id, fromL:lab(hh.from), toL:lab(hh.to), dateL:new Date(hh.date).toLocaleDateString('fr-FR', { day:'numeric', month:'short' }), note:hh.note ? ' · ' + hh.note : '', op:hh.undone ? .45 : 1, undoLabel:hh.undone ? 'annulé' : 'Annuler', undo:() => !hh.undone && this.undoHist(hh) }));
       V.ins = { code:sel, name:c.name, en:c.en, hex:c.hex, ring:ring(c.hex), famL:famLabel[REF_BY[sel] ? REF_BY[sel].fam : 'neutral'],
@@ -720,7 +735,7 @@ class App extends React.Component {
         const vs = views.filter(v => v.raw.modelId === m.id);
         V.md = {
           morphOp:S.morphing ? 0 : 1,
-          name:m.name, src:m.src, ar:`${m.ow} / ${m.oh}`, recL:`${vs.length} recette${vs.length > 1 ? 's' : ''} sur ${PALS.length * DITHERS.length} possibles`,
+          name:m.name, src:m.src, ar:`${m.ow} / ${m.oh}`, recL:`${vs.length} recette${vs.length > 1 ? 's' : ''}`,
           rename:e => this.updateModel(m.id, { name:e.target.value }, 'debounce'),
           tags:m.tags.map(g => ({ label:g, remove:() => this.updateModel(m.id, { tags:m.tags.filter(x => x !== g) }) })),
           changeImg:async e => {
@@ -735,14 +750,17 @@ class App extends React.Component {
             catch (err) { this.fail(err); }
           },
           rows:PALS.map(p => ({ id:p.id, short:p.short, n:p.colors.length, cells:DITHERS.map(dd => {
-            const v = vs.find(x => x.raw.pal === p.id && x.raw.dith === dd.id), onFile = e => { const f = e.target.files[0]; e.target.value = ''; this.fileToRecipe(f, m.id, p.id, dd.id); };
-            return v ? { ...v, key:dd.id, filled:true, empty:false, onFile, remove:() => this.removeRecipe(v.raw), delLabel:S.recipeDel === v.id ? 'Confirmer ?' : 'Supprimer', delW:S.recipeDel === v.id ? 600 : 400 } : { key:dd.id, filled:false, empty:true, onFile };
+            const onFile = e => { const f = e.target.files[0]; e.target.value = ''; this.fileToRecipe(f, m.id, p.id, dd.id); };
+            const items = vs.filter(x => x.raw.pal === p.id && x.raw.dith === dd.id).map(v => ({ ...v,
+              replace:e => { const f = e.target.files[0]; e.target.value = ''; this.fileToRecipe(f, m.id, p.id, dd.id, { replaceId:v.id }); },
+              remove:() => this.removeRecipe(v.raw), delLabel:S.recipeDel === v.id ? 'Confirmer ?' : 'Supprimer', delW:S.recipeDel === v.id ? 600 : 400 }));
+            return { key:dd.id, items, empty:!items.length, onFile };
           }) }))
         };
         const cmp = [['', vs.map(v => v.dithLabel)], ['Taille', vs.map(v => v.dims)], ['Plaques', vs.map(v => v.plates)], ['Couleurs', vs.map(v => String(v.ncolors))], ['Perles', vs.map(v => v.totalF)], ['Complétion', vs.map(v => v.pct + ' %')], ['Statut', vs.map(v => v.ok ? 'Réalisable' : v.missing ? `−${fmt(v.missing)}` : 'À vérifier')]];
         V.md.hasCmp = vs.length > 0;
         V.md.cmpCols = `110px repeat(${Math.max(1, vs.length)}, minmax(110px,1fr))`;
-        V.md.cmpCells = cmp.flatMap(([lab, vals], ri) => [{ v:lab, font:"'Zen Kaku Gothic New'", col:t.muted, fw:400 }].concat(vals.map(x => ({ v:x, font:ri === 0 ? "'Zen Kaku Gothic New'" : "'DM Mono',monospace", col:ri === 6 && x !== 'Réalisable' ? t.accent : t.ink, fw:ri === 0 ? 500 : 400 }))));
+        V.md.cmpCells = cmp.flatMap(([lab, vals], ri) => [{ v:lab, font:"'Zen Kaku Gothic New'", col:t.muted, fw:400 }].concat(vals.map(x => ({ v:x, font:ri === 0 ? "'Zen Kaku Gothic New'" : "'DM Mono',monospace", col:ri === 6 && x !== 'Réalisable' ? t.accent : t.ink, fw:ri === 0 ? 500 : 400, ws:ri === 0 ? 'normal' : 'nowrap' }))));
         V.dithHeads = DITHERS;
         // générateur
         {
@@ -752,13 +770,24 @@ class App extends React.Component {
           const colors = S.genStock ? base.filter(c => stock[c.code] !== 0 && stock[c.code] !== undefined) : base;
           const img = S.genOpen ? this.genImage(m.src) : null;
           const cards = DITHERS.map(dd => {
-            const existing = vs.find(x => x.raw.pal === pal.id && x.raw.dith === dd.id);
-            const card = { id:dd.id, label:dd.label, saveLabel:existing ? 'Remplacer' : 'Enregistrer', ready:false };
+            // Recettes déjà générées avec exactement ces réglages ; la plus récente est celle que « Remplacer » écrase.
+            const same = vs.filter(x => x.raw.pal === pal.id && x.raw.dith === dd.id && x.raw.source === 'generated' && x.raw.metric === S.genMetric && x.raw.stockOnly === S.genStock).sort((a, b) => b.id - a.id);
+            const card = { id:dd.id, label:dd.label, ready:false, actions:[] };
             if (!img || !colors.length) return card;
             const prev = this.genPreview(img, m.src, W, H, colors, dd.id, S.genMetric), f = feas({ counts:prev.counts }, stock);
-            return { ...card, ready:true, src:prev.src, statL:`${Object.keys(prev.counts).length} coul. · ${fmt(f.total)} perles`,
+            const shown = { ...card, ready:true, src:prev.src, statL:`${Object.keys(prev.counts).length} coul. · ${fmt(f.total)} perles`,
               pct:f.pct, pctW:f.pct + '%', barCol:f.ok ? t.ink : t.accent, ok:f.ok,
-              save:() => this.saveGenerated(prev, m.id, pal.id, dd.id), zoom:() => this.setState({ genZoom:dd.id }) };
+              zoom:() => this.setState({ genZoom:dd.id }) };
+            // Même image qu'une recette déjà enregistrée (mêmes dimensions et mêmes quantités) : rien à enregistrer.
+            const sig = r => r.w + 'x' + r.h + '|' + Object.keys(r.counts).sort().map(k => k + ':' + r.counts[k]).join(',');
+            const mine = sig({ w:W, h:H, counts:prev.counts }), dup = same.find(x => sig(x.raw) === mine);
+            const add = () => this.saveGenerated(prev, m.id, pal.id, dd.id, { add:true });
+            const replace = same.length ? () => this.saveGenerated(prev, m.id, pal.id, dd.id, { replaceId:same[0].id }) : null;
+            const ready = { ...shown, dup:!!dup, dupL:'Déjà enregistrée', hasSame:same.length > 0,
+              sameL:same.length ? `${same.length} recette${same.length > 1 ? 's' : ''} avec ces réglages` : '' };
+            ready.actions = dup ? [] : same.length ? [{ label:'Ajouter', go:add, main:true }, { label:'Remplacer', go:replace }] : [{ label:'Enregistrer', go:add, main:true }];
+            ready.save = dup ? null : (replace || add);
+            return ready;
           });
           V.gen = {
             open:S.genOpen, toggle:() => this.setState(s => ({ genOpen:!s.genOpen })),
@@ -770,7 +799,7 @@ class App extends React.Component {
             stockTrack:S.genStock ? t.ink : t.line2, stockKnob:S.genStock ? '15px' : '2px',
             stockL:S.genStock ? `${colors.length} couleur${colors.length > 1 ? 's' : ''} en stock sur ${base.length}` : `${base.length} couleurs opaques de la palette`,
             noColors:!colors.length, loading:S.genOpen && !img && colors.length > 0, cards,
-            saveAll:async () => { for (const c of cards) if (c.ready) await c.save(); }
+            saveAll:async () => { for (const c of cards) if (c.ready && c.save) await c.save(); }
           };
           // visionneuse : agrandissement d'un facteur entier pour que toutes les perles aient la même taille
           const zc = S.genZoom && cards.find(c => c.id === S.genZoom && c.ready);
@@ -781,7 +810,7 @@ class App extends React.Component {
               cell:k + 'px', grid:S.genGrid && k >= 4, canGrid:k >= 4, gridOn:S.genGrid,
               toggleGrid:() => this.setState(s => ({ genGrid:!s.genGrid })),
               prev:() => this.stepZoom(-1), next:() => this.stepZoom(1), close:() => this.setState({ genZoom:null }),
-              save:async () => { await zc.save(); } };
+            };
           }
         }
         V.tagDraft = S.tagDraft; V.setTagDraft = e => this.setState({ tagDraft:e.target.value });
@@ -1333,21 +1362,29 @@ function tplModel(V, t, panel) {
             <div style="font-size:11px; color:${t.muted};">${row.n} couleurs</div>
           </div>`,
           ...row.cells.map(c => html`
-            <div key=${row.id + c.key} style="min-height:250px; display:flex;">
-              ${c.filled && html`
-                <div style="flex:1; ${panel} padding:10px; display:flex; flex-direction:column; gap:8px; min-width:0;">
-                  <div onClick=${c.open} style="cursor:pointer; height:120px; background:#FBFAF6; box-shadow:0 0 0 1px #B8322A; display:flex; align-items:center; justify-content:center;"><img src=${c.src} alt="" style="width:100%; height:100%; padding:4px; object-fit:contain; image-rendering:pixelated;" /></div>
-                  <div style="font-family:'DM Mono',monospace; font-size:11px; color:${t.muted}; line-height:1.5;">${c.dims} · ${c.plates}<br />${c.ncolors} coul. · ${c.totalF} perles</div>
+            <div key=${row.id + c.key} style="min-height:250px; display:flex; flex-direction:column; gap:8px; min-width:0;">
+              ${c.items.map(v => html`
+                <div key=${v.id} style="${panel} padding:10px; display:flex; flex-direction:column; gap:8px; min-width:0;">
+                  <div onClick=${v.open} style="cursor:pointer; height:120px; background:#FBFAF6; box-shadow:0 0 0 1px #B8322A; display:flex; align-items:center; justify-content:center;"><img src=${v.src} alt="" style="width:100%; height:100%; padding:4px; object-fit:contain; image-rendering:pixelated;" /></div>
+                  <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                    ${v.origin.map(g => html`<span key=${g} style="font-size:10.5px; padding:2px 7px; border-radius:999px; border:1px solid ${t.line2}; color:${t.muted}; white-space:nowrap;">${g}</span>`)}
+                  </div>
+                  <div style="font-family:'DM Mono',monospace; font-size:11px; color:${t.muted}; line-height:1.5;">${v.dims} · ${v.plates}<br />${v.ncolors} coul. · ${v.totalF} perles</div>
                   <div style="display:flex; align-items:center; gap:8px;">
-                    <div style="flex:1; height:3px; background:${t.line};"><div style="height:3px; width:${c.pctW}; background:${c.barCol};"></div></div>
-                    <div style="font-family:'DM Mono',monospace; font-size:11px;">${c.pct}%</div>
+                    <div style="flex:1; height:3px; background:${t.line};"><div style="height:3px; width:${v.pctW}; background:${v.barCol};"></div></div>
+                    <div style="font-family:'DM Mono',monospace; font-size:11px;">${v.pct}%</div>
                   </div>
-                  <div style="margin-top:auto; display:flex; justify-content:space-between; gap:6px; font-size:11px;">
-                    <div onClick=${c.open} style="cursor:pointer; color:${t.ink};">Détail</div>
-                    <label style="position:relative; cursor:pointer; color:${t.muted};">Remplacer<input type="file" accept="image/png,image/*" onChange=${c.onFile} style="position:absolute; inset:0; opacity:0; cursor:pointer; width:100%;" /></label>
-                    <div onClick=${c.remove} style="cursor:pointer; color:${t.accent}; font-weight:${c.delW};">${c.delLabel}</div>
+                  <div style="display:flex; justify-content:space-between; gap:6px; font-size:11px;">
+                    <div onClick=${v.open} style="cursor:pointer; color:${t.ink};">Détail</div>
+                    <label style="position:relative; cursor:pointer; color:${t.muted};">Remplacer<input type="file" accept="image/png,image/*" onChange=${v.replace} style="position:absolute; inset:0; opacity:0; cursor:pointer; width:100%;" /></label>
+                    <div onClick=${v.remove} style="cursor:pointer; color:${t.accent}; font-weight:${v.delW};">${v.delLabel}</div>
                   </div>
-                </div>`}
+                </div>`)}
+              ${!c.empty && html`
+                <label style="position:relative; cursor:pointer; border:1.5px dashed ${t.line2}; border-radius:4px; padding:8px; text-align:center; font-size:11px; color:${t.muted};" style-hover="background:rgba(127,127,127,.06);">
+                  ＋ Importer une image
+                  <input type="file" accept="image/png,image/*" onChange=${c.onFile} style="position:absolute; inset:0; opacity:0; cursor:pointer; width:100%;" />
+                </label>`}
               ${c.empty && html`
                 <label style="flex:1; position:relative; cursor:pointer; border:1.5px dashed ${t.line2}; border-radius:4px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; text-align:center; padding:12px; color:${t.muted}; transition:background .2s;" style-hover="background:rgba(127,127,127,.06);">
                   <div style="font-family:'Shippori Mincho',serif; font-size:26px; opacity:.6;">＋</div>
@@ -1362,7 +1399,7 @@ function tplModel(V, t, panel) {
         <div style="${panel} padding:20px 22px; display:flex; flex-direction:column; gap:12px; overflow-x:auto;">
           <div style="font-family:'Shippori Mincho',serif; font-size:22px;">Comparer les recettes</div>
           <div style="display:grid; grid-template-columns:${md.cmpCols}; font-size:13px; min-width:0;">
-            ${md.cmpCells.map((x, i) => html`<div key=${i} style="padding:9px 10px 9px 0; border-top:1px solid ${t.line}; font-family:${x.font}; color:${x.col}; font-weight:${x.fw}; white-space:nowrap;">${x.v}</div>`)}
+            ${md.cmpCells.map((x, i) => html`<div key=${i} style="padding:9px 10px 9px 0; border-top:1px solid ${t.line}; font-family:${x.font}; color:${x.col}; font-weight:${x.fw}; white-space:${x.ws || 'nowrap'};">${x.v}</div>`)}
           </div>
         </div>`}
     </div>
@@ -1414,10 +1451,22 @@ function tplGenerator(V, t, panel) {
               <div style="flex:1; height:3px; background:${t.line};"><div style="height:3px; width:${c.pctW}; background:${c.barCol};"></div></div>
               <div style="font-family:'DM Mono',monospace; font-size:11px;">${c.pct}%</div>
             </div>`}
-          ${c.ready && html`<div onClick=${c.save} style="cursor:pointer; text-align:center; padding:7px 10px; border-radius:999px; font-size:12px; border:1px solid ${t.ink};">${c.saveLabel}</div>`}
+          ${c.ready && genActions(c, t)}
         </div>`)}
     </div>`}
 </div>`;
+}
+
+// Boutons d'une carte du générateur : Enregistrer, ou Ajouter / Remplacer s'il existe déjà une recette avec ces réglages.
+function genActions(c, t) {
+  if (c.dup) return html`<div style="text-align:center; padding:7px 10px; font-size:12px; color:${t.muted};">${c.dupL}</div>`;
+  return html`
+    <div style="display:flex; flex-direction:column; gap:4px;">
+      <div style="display:flex; gap:6px;">
+        ${c.actions.map(a => html`<div key=${a.label} onClick=${a.go} style="flex:1; cursor:pointer; text-align:center; padding:7px 10px; border-radius:999px; font-size:12px; ${a.main ? `border:1px solid ${t.ink};` : `border:1px solid ${t.line2}; color:${t.muted};`}">${a.label}</div>`)}
+      </div>
+      ${c.hasSame && html`<div style="font-size:10.5px; color:${t.muted}; text-align:center;">${c.sameL}</div>`}
+    </div>`;
 }
 
 function tplZoom(V, t) {
@@ -1444,7 +1493,8 @@ function tplZoom(V, t) {
   <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap; justify-content:center; color:#F3E9D8; font-size:13px;">
     <span style="font-family:'DM Mono',monospace; font-size:12px; opacity:.8;">${z.statL} · ${z.pct} % en stock</span>
     ${z.canGrid && html`<div onClick=${z.toggleGrid} style="${btn} border:1px solid rgba(243,233,216,.4); background:${z.gridOn ? '#F3E9D8' : 'transparent'}; color:${z.gridOn ? '#1A1714' : '#F3E9D8'};">Grille</div>`}
-    <div onClick=${z.save} style="${btn} font-weight:500; background:#F3E9D8; color:#1A1714;">${z.saveLabel}</div>
+    ${z.dup && html`<span style="font-size:12px; opacity:.8;">${z.dupL}</span>`}
+    ${z.actions.map(a => html`<div key=${a.label} onClick=${a.go} style="${btn} ${a.main ? 'font-weight:500; background:#F3E9D8; color:#1A1714;' : 'border:1px solid rgba(243,233,216,.4);'}">${a.label}</div>`)}
   </div>
 </div>`;
 }

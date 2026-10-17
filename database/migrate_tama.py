@@ -1,7 +1,9 @@
 """Migration pour la refonte "Tama" (idempotente, peut etre relancee sans risque).
 
 - PearlHistory : ajoute `note` (origine du mouvement) et `undone` (mouvement annule).
-- Recipe : ajoute `width` / `height` (dimensions en perles).
+- Recipe : ajoute `width` / `height` (dimensions en perles), et l'origine de la recette :
+  `source` (generated / imported), `metric` (distance utilisee), `stock_only` (1 = couleurs possedees,
+  0 = toutes). Vides pour les recettes creees avant : on ne sait pas comment elles ont ete faites.
 - Colors : ajoute `name_fr` et le remplit pour les codes Hama connus.
 - ModelTag : nouvelle table des tags de modeles.
 
@@ -50,6 +52,9 @@ def migrate(db_path=DB_PATH):
     add_column(cursor, 'PearlHistory', 'undone INTEGER NOT NULL DEFAULT 0')
     add_column(cursor, 'Recipe', 'width INTEGER NOT NULL DEFAULT 0')
     add_column(cursor, 'Recipe', 'height INTEGER NOT NULL DEFAULT 0')
+    add_column(cursor, 'Recipe', 'source TEXT')
+    add_column(cursor, 'Recipe', 'metric TEXT')
+    add_column(cursor, 'Recipe', 'stock_only INTEGER')
     add_column(cursor, 'Colors', 'name_fr TEXT')
 
     cursor.execute('''

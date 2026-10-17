@@ -116,6 +116,9 @@ CREATE TABLE Recipe (
     image_path TEXT NOT NULL,
     width INTEGER NOT NULL DEFAULT 0,
     height INTEGER NOT NULL DEFAULT 0,
+    source TEXT,          -- 'generated' (generateur de l'app) ou 'imported' (image deposee)
+    metric TEXT,          -- distance de couleur utilisee : weighted, oklab, ciede2000
+    stock_only INTEGER,   -- recette generee : 1 = couleurs possedees seulement, 0 = toutes
     FOREIGN KEY (model_id) REFERENCES Model (id),
     FOREIGN KEY (list_id) REFERENCES ColorList (id)
 );
