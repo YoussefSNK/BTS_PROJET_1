@@ -124,29 +124,48 @@ def block_size(lines):
     return max(size, 1)
 
 
-def analyse_recipe(path, palette, detect_scale=True, metric=DEFAULT_METRIC):
-    """Retourne (largeur, hauteur, {code: quantite}) en perles.
+def natural_code_key(code):
+    """Tri des codes par valeur numerique (H9 < H10 < H101)."""
+    digits = ''.join(ch for ch in code if ch.isdigit())
+    return (int(digits) if digits else -1, code)
+
+
+def bead_image(path, detect_scale=True):
+    """Image RGBA a une perle par pixel.
 
     Une recette est souvent exportee agrandie (chaque perle = un carre de N x N pixels) :
-    on detecte ce facteur, on ramene l'image a une perle par pixel, puis chaque couleur
-    est associee a la couleur la plus proche de la palette. Les pixels transparents sont ignores.
+    on detecte ce facteur et on ramene l'image a une perle par pixel.
     `detect_scale=False` pour une image deja a une perle par pixel (recette generee par l'app).
-    `metric` : distance utilisee (voir routes/color_metrics.py).
     """
     with Image.open(path) as source:
         img = source.convert('RGBA')
+    if not detect_scale:
+        return img
     width, height = img.size
     row_bytes = img.tobytes()
     rows = [row_bytes[y * width * 4:(y + 1) * width * 4] for y in range(height)]
     col_bytes = img.transpose(Image.Transpose.TRANSPOSE).tobytes()
     cols = [col_bytes[x * height * 4:(x + 1) * height * 4] for x in range(width)]
-    bx, by = (block_size(cols), block_size(rows)) if detect_scale else (1, 1)
+    bx, by = block_size(cols), block_size(rows)
     if bx > 1 or by > 1:
         img = img.resize((width // bx, height // by), Image.Resampling.NEAREST)
-        width, height = img.size
+    return img
 
-    nearest = nearest_finder(
+
+def palette_finder(palette, metric):
+    return nearest_finder(
         [(code, tuple(int(hex_code[i:i + 2], 16) for i in (1, 3, 5))) for code, hex_code in palette], metric)
+
+
+def analyse_recipe(path, palette, detect_scale=True, metric=DEFAULT_METRIC):
+    """Retourne (largeur, hauteur, {code: quantite}) en perles.
+
+    Chaque couleur est associee a la couleur la plus proche de la palette selon `metric`
+    (voir routes/color_metrics.py). Les pixels transparents (pas de perle) sont ignores.
+    """
+    img = bead_image(path, detect_scale)
+    width, height = img.size
+    nearest = palette_finder(palette, metric)
     counts = {}
     for count, (r, g, b, a) in img.getcolors(maxcolors=width * height) or []:
         if a < 128:
@@ -154,6 +173,22 @@ def analyse_recipe(path, palette, detect_scale=True, metric=DEFAULT_METRIC):
         code = nearest((r, g, b))
         counts[code] = counts.get(code, 0) + count
     return width, height, counts
+
+
+def recipe_grid(path, palette, detect_scale=True, metric=DEFAULT_METRIC):
+    """Retourne (largeur, hauteur, [code ou None par perle, ligne par ligne]) : meme analyse que analyse_recipe."""
+    img = bead_image(path, detect_scale)
+    nearest, memo = palette_finder(palette, metric), {}
+    cells = []
+    for r, g, b, a in img.getdata():
+        if a < 128:
+            cells.append(None)
+            continue
+        key = (r, g, b)
+        if key not in memo:
+            memo[key] = nearest(key)
+        cells.append(memo[key])
+    return img.size[0], img.size[1], cells
 
 
 # ---------- serialisation ----------
@@ -533,6 +568,37 @@ def create_recipe():
     recipe = recipe_json(cursor, cursor.execute('SELECT * FROM Recipe WHERE id = ?', (recipe_id,)).fetchone())
     conn.close()
     return jsonify(recipe)
+
+
+@tama_bp.route('/api/recipes/<int:recipe_id>/grid')
+@api_login_required
+def recipe_grid_view(recipe_id):
+    """Plan de montage : la couleur de chaque perle, ligne par ligne.
+
+    Reponse : {w, h, codes: [codes utilises, ordre naturel], cells: [indice dans codes, ou -1 sans perle]}.
+    Meme analyse que celle qui a produit les quantites de la recette, donc les totaux concordent.
+    """
+    user_id = session['user_id']
+    conn = connect()
+    cursor = conn.cursor()
+    recipe = cursor.execute('''
+        SELECT r.* FROM Recipe r JOIN Model m ON r.model_id = m.id WHERE r.id = ? AND m.user_id = ?
+    ''', (recipe_id, user_id)).fetchone()
+    if recipe is None:
+        conn.close()
+        return error('Recette introuvable', 404)
+    palette = [(row['code'], row['hex']) for row in
+               cursor.execute('SELECT code, hex FROM Colors WHERE list_id = ?', (recipe['list_id'],))]
+    conn.close()
+    metric = recipe['metric'] if recipe['metric'] in METRICS else DEFAULT_METRIC
+    try:
+        width, height, cells = recipe_grid(upload_path(recipe['image_path']), palette,
+                                           detect_scale=recipe['source'] != 'generated', metric=metric)
+    except OSError:
+        return error("Impossible de lire l'image de la recette.")
+    codes = sorted({c for c in cells if c}, key=natural_code_key)
+    index = {code: i for i, code in enumerate(codes)}
+    return jsonify(w=width, h=height, codes=codes, cells=[index[c] if c else -1 for c in cells])
 
 
 @tama_bp.route('/api/recipes/<int:recipe_id>', methods=['DELETE'])

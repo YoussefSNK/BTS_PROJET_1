@@ -228,6 +228,7 @@ async function api(method, url, body) {
 function normalizeStock(stock) { const s = { ...stock }; ALL_CODES.forEach(c => { if (!(c in s)) s[c] = 0; }); return s; }
 
 const LS = 'tama-app-v1';
+const LS_PLAN = 'tama-plan-progress';   // { idRecette: [codes déjà placés] }
 
 function feas(r, stock) {
   let total = 0, have = 0, opt = 0, missing = 0, unknown = 0, missCols = 0; const rows = [];
@@ -263,7 +264,110 @@ function brushMask() {
   return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '")';
 }
 const BRUSH = brushMask();
-const PAGE_KANJI = { home:'ようこそ', stock:'在庫', models:'図案', model:'図案', feas:'可能', count:'数' };
+const PAGE_KANJI = { home:'ようこそ', stock:'在庫', models:'図案', model:'図案', plan:'図面', feas:'可能', count:'数' };
+
+// ---------- plan de montage ----------
+const PLATE = 29;   // une plaque Hama carrée fait 29 × 29 perles
+// Symboles courts lisibles dans une case : sans 0/O, 1/I/l, o, pour éviter les confusions.
+const SYMBOLS = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyzαβγδεζηθλμξπσφψω#%&+=?@$€£¥§'.split('');
+const symbolAt = i => SYMBOLS[i] || String(i + 1);
+const plateRow = i => String.fromCharCode(65 + i);   // rangées de plaques : A, B, C…
+// Texte noir sur les couleurs claires, blanc sur les sombres (luminance perçue).
+const inkOn = hex => { const [r, g, b] = rgbOf(hex); return .299 * r + .587 * g + .114 * b > 150 ? '#141315' : '#FFFFFF'; };
+const PLAN_MARGIN = 26;
+
+// Dessine la grille : une case par perle, symbole centré, traits fins entre perles, traits épais entre plaques.
+function drawPlan(x, plan, o) {
+  const { w, h, cells } = plan, c = o.cell, m = o.margin, W = w * c, H = h * c;
+  x.fillStyle = o.bg; x.fillRect(0, 0, m + W + 1, m + H + 1);
+  x.save(); x.translate(m, m);
+  x.fillStyle = '#FBFAF6'; x.fillRect(0, 0, W, H);
+  const showSym = c >= 11;
+  x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = `500 ${Math.round(c * .56)}px 'DM Mono', monospace`;
+  // Mode montage (une couleur en cours ou des couleurs placées) : la couleur en cours garde ses symboles et
+  // sera entourée, les couleurs placées restent en couleur sans symbole, les autres sont estompées.
+  const placed = o.placed || [], mode = o.hi >= 0 || placed.some(Boolean);
+  for (let y = 0; y < h; y++) for (let xx = 0; xx < w; xx++) {
+    const i = cells[y * w + xx]; if (i < 0) continue;
+    const cur = i === o.hi, faded = mode && !cur && !placed[i];
+    x.globalAlpha = faded ? .14 : 1;
+    x.fillStyle = o.hex[i]; x.fillRect(xx * c, y * c, c, c);
+    if (showSym && (!mode || cur)) { x.fillStyle = o.ink[i]; x.fillText(o.sym[i], xx * c + c / 2, y * c + c / 2 + .5); }
+  }
+  x.globalAlpha = 1;
+  if (c >= 6) {
+    x.strokeStyle = 'rgba(26,23,20,.22)'; x.lineWidth = 1; x.beginPath();
+    for (let xx = 1; xx < w; xx++) if (xx % PLATE) { x.moveTo(xx * c + .5, 0); x.lineTo(xx * c + .5, H); }
+    for (let y = 1; y < h; y++) if (y % PLATE) { x.moveTo(0, y * c + .5); x.lineTo(W, y * c + .5); }
+    x.stroke();
+  }
+  x.strokeStyle = o.plateLine; x.lineWidth = 2; x.beginPath();
+  for (let xx = 0; xx <= w; xx += PLATE) { x.moveTo(xx * c, 0); x.lineTo(xx * c, H); }
+  for (let y = 0; y <= h; y += PLATE) { x.moveTo(0, y * c); x.lineTo(W, y * c); }
+  x.moveTo(W, 0); x.lineTo(W, H); x.moveTo(0, H); x.lineTo(W, H); x.stroke();
+  // contour blanc + noir autour de chaque perle de la couleur en cours : visible sur n'importe quelle teinte
+  if (o.hi >= 0) {
+    const pass = (col, lw, inset) => {
+      x.strokeStyle = col; x.lineWidth = lw; x.beginPath();
+      for (let y = 0; y < h; y++) for (let xx = 0; xx < w; xx++) if (cells[y * w + xx] === o.hi) x.rect(xx * c + inset, y * c + inset, c - 2 * inset, c - 2 * inset);
+      x.stroke();
+    };
+    pass('#FFFFFF', Math.max(2, c * .14), Math.max(1.5, c * .1)); pass('#141315', Math.max(1, c * .06), Math.max(1.5, c * .1));
+  }
+  x.restore();
+  // repères des plaques : colonnes 1, 2… en haut, rangées A, B… à gauche
+  x.fillStyle = o.label; x.font = `500 12px 'DM Mono', monospace`; x.textAlign = 'center'; x.textBaseline = 'middle';
+  for (let k = 0; k * PLATE < w; k++) x.fillText(String(k + 1), m + (k * PLATE + Math.min(PLATE, w - k * PLATE) / 2) * c, m / 2);
+  for (let k = 0; k * PLATE < h; k++) x.fillText(plateRow(k), m / 2, m + (k * PLATE + Math.min(PLATE, h - k * PLATE) / 2) * c);
+}
+
+class PlanCanvas extends React.Component {
+  componentDidMount() { this.draw(); }
+  componentDidUpdate() { this.draw(); }
+  // Le survol ne change que la ligne d'état : on ne redessine que si le plan, le zoom ou la couleur isolée changent.
+  shouldComponentUpdate(n) { const a = this.props.opts, b = n.opts; return n.plan !== this.props.plan || a.cell !== b.cell || a.hi !== b.hi || a.placedKey !== b.placedKey || a.bg !== b.bg || a.plateLine !== b.plateLine; }
+  draw() {
+    const cv = this.cv; if (!cv) return;
+    const { plan, opts } = this.props, dpr = window.devicePixelRatio || 1;
+    const cw = opts.margin + plan.w * opts.cell + 1, ch = opts.margin + plan.h * opts.cell + 1;
+    cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr); cv.style.width = cw + 'px'; cv.style.height = ch + 'px';
+    const x = cv.getContext('2d'); x.setTransform(dpr, 0, 0, dpr, 0, 0); drawPlan(x, plan, opts);
+  }
+  at(e) {
+    const { plan, opts } = this.props, r = this.cv.getBoundingClientRect();
+    const xx = Math.floor((e.clientX - r.left - opts.margin) / opts.cell), y = Math.floor((e.clientY - r.top - opts.margin) / opts.cell);
+    return xx >= 0 && y >= 0 && xx < plan.w && y < plan.h ? { x:xx, y, i:plan.cells[y * plan.w + xx] } : null;
+  }
+  render() {
+    const p = this.props;
+    return React.createElement('canvas', { ref:el => { this.cv = el; }, style:{ display:'block', cursor:'crosshair' },
+      onMouseMove:e => p.onHover(this.at(e)), onMouseLeave:() => p.onHover(null), onClick:e => { const a = this.at(e); if (a && a.i >= 0) p.onPick(a.i); } });
+  }
+}
+
+// Export PNG à imprimer : le plan en grand, puis la légende en colonnes.
+function exportPlan(plan, opts, legend, title) {
+  const cell = 24, m = 32, gridW = m + plan.w * cell + 1, gridH = m + plan.h * cell + 1;
+  const colW = 300, rowH = 26, width = Math.max(gridW + 40, colW * 2 + 40), perCol = Math.ceil(legend.length / Math.max(1, Math.floor((width - 40) / colW)));
+  const height = 70 + gridH + 40 + perCol * rowH + 30;
+  const cv = mk(width, height), x = cv.getContext('2d');
+  x.fillStyle = '#FFFFFF'; x.fillRect(0, 0, width, height);
+  x.fillStyle = '#1A1714'; x.font = `500 22px 'Shippori Mincho', serif`; x.textAlign = 'left'; x.textBaseline = 'alphabetic'; x.fillText(title, 20, 34);
+  x.font = `13px 'Zen Kaku Gothic New', sans-serif`; x.fillStyle = '#5E564B'; x.fillText(opts.subtitle, 20, 56);
+  x.save(); x.translate(20, 70); drawPlan(x, plan, { ...opts, cell, margin:m, hi:-1, bg:'#FFFFFF', label:'#1A1714', plateLine:'#1A1714' }); x.restore();
+  legend.forEach((l, k) => {
+    const cx = 20 + Math.floor(k / perCol) * colW, cy = 70 + gridH + 40 + (k % perCol) * rowH;
+    x.fillStyle = l.hex; x.fillRect(cx, cy, 20, 20); x.strokeStyle = 'rgba(26,23,20,.3)'; x.strokeRect(cx + .5, cy + .5, 19, 19);
+    x.fillStyle = l.ink; x.font = `500 12px 'DM Mono', monospace`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(l.sym, cx + 10, cy + 10.5);
+    x.fillStyle = '#1A1714'; x.textAlign = 'left'; x.fillText(l.code, cx + 30, cy + 10.5);
+    x.font = `13px 'Zen Kaku Gothic New', sans-serif`; x.fillText(l.name, cx + 80, cy + 10.5);
+    x.font = `500 12px 'DM Mono', monospace`; x.textAlign = 'right'; x.fillText(l.countL, cx + colW - 20, cy + 10.5);
+  });
+  const a = document.createElement('a'); a.href = cv.toDataURL('image/png'); a.download = `plan-${title.replace(/[^\w-]+/g, '-').toLowerCase()}.png`; a.click();
+}
+
+
+function loadPlanDone() { try { const v = JSON.parse(localStorage.getItem(LS_PLAN) || '{}'); return v && typeof v === 'object' ? v : {}; } catch (e) { return {}; } }
 
 class App extends React.Component {
   constructor(p) {
@@ -279,7 +383,7 @@ class App extends React.Component {
       feasPal:'all', feasSort:'pct', showCodes:true, feasColor:null, expanded:{}, sel:{},
       drawer:null, shop:null, copied:false, newOpen:false, nm:{ name:'', src:null, file:null }, busy:false,
       countImg:null, countPts:[], countSize:22, toast:null,
-      genZoom:null, genGrid:false,
+      genZoom:null, genGrid:false, planDone:loadPlanDone(),
       genOpen:false, genW:String(saved.genW || GEN_DEFAULT_W), genStock:!!saved.genStock, genMetric:METRICS[saved.genMetric] ? saved.genMetric : DEFAULT_METRIC,
       genPal:PALS.slice().sort((a, b) => b.colors.length - a.colors.length)[0].id
     };
@@ -311,8 +415,9 @@ class App extends React.Component {
   componentWillUnmount() { window.removeEventListener('keydown', this.onKey); window.removeEventListener('resize', this.onResize); }
   componentDidUpdate() {
     const { screen, theme, feasTab, genW, genStock, genMetric } = this.state;
-    try { localStorage.setItem(LS, JSON.stringify({ screen:screen === 'model' ? 'models' : screen, theme, feasTab, genW:genWidth(genW), genStock, genMetric })); } catch (e) {}
+    try { localStorage.setItem(LS, JSON.stringify({ screen:screen === 'model' || screen === 'plan' ? 'models' : screen, theme, feasTab, genW:genWidth(genW), genStock, genMetric })); } catch (e) {}
     this.syncBody();
+    if (this.state.planDone !== this._savedDone) { this._savedDone = this.state.planDone; try { localStorage.setItem(LS_PLAN, JSON.stringify(this.state.planDone)); } catch (e) {} }
   }
   syncBody() { const t = THEMES[this.state.theme]; document.body.style.background = t.bg; document.body.style.color = t.ink; }
 
@@ -526,6 +631,17 @@ class App extends React.Component {
     }
     return this.genCache.get(key);
   }
+  // Grille d'une recette (perle par perle), chargée une fois par image : se recharge si l'image est remplacée.
+  planData(r) {
+    this.plans = this.plans || {};
+    const key = r.id + '|' + r.src, cur = this.plans[key];
+    if (cur && cur !== 'loading') return cur;
+    if (!cur) {
+      this.plans[key] = 'loading';
+      api('GET', `/api/recipes/${r.id}/grid`).then(g => { this.plans[key] = g; this.setState({ planTick:Date.now() }); }, err => { delete this.plans[key]; this.fail(err); });
+    }
+    return null;
+  }
   stepZoom(dir) {
     const ids = DITHERS.map(d => d.id), i = ids.indexOf(this.state.genZoom);
     this.setState({ genZoom:ids[(i + dir + ids.length) % ids.length] });
@@ -552,7 +668,8 @@ class App extends React.Component {
       rows, raw:r,
       open:() => this.openDrawer(r.id),
       markDone:() => this.markDone(r), shopOne:() => this.setState({ shop:[r.id], copied:false, drawer:null }),
-      goModel:() => this.go('model', { modelId:r.modelId })
+      goModel:() => this.go('model', { modelId:r.modelId }),
+      openPlan:() => this.go('plan', { planId:r.id, planHi:-1, planHover:null })
     };
   }
   shopData(ids, S) {
@@ -572,7 +689,7 @@ class App extends React.Component {
     const d = new Date();
     const userName = S.user.login || '';
     const nav = [['home', '一', 'Accueil', 'tableau de bord'], ['stock', '二', 'Stock', `${ALL_CODES.length} codes`], ['models', '三', 'Modèles', `${S.models.length} modèle${S.models.length > 1 ? 's' : ''}`], ['feas', '四', 'Faisabilité', `${okViews.length} réalisable${okViews.length > 1 ? 's' : ''}`], ['count', '五', 'Comptage', 'outil libre']]
-      .map(([id, jp, label, sub]) => { const on = S.screen === id || (id === 'models' && S.screen === 'model'); return { id, jp, label, sub, op:on ? 1 : .5, dot:on ? 1 : 0, fw:on ? 500 : 400, subCol:on ? t.accent : t.muted, go:() => this.go(id) }; });
+      .map(([id, jp, label, sub]) => { const on = S.screen === id || (id === 'models' && (S.screen === 'model' || S.screen === 'plan')); return { id, jp, label, sub, op:on ? 1 : .5, dot:on ? 1 : 0, fw:on ? 500 : 400, subCol:on ? t.accent : t.muted, go:() => this.go(id) }; });
     const ph0 = S.pt || 'idle', ph = ['out', 'in0', 'in'].includes(ph0) ? ph0 : 'idle', E = 'cubic-bezier(.72,0,.28,1)', EO = 'cubic-bezier(.16,1,.3,1)';
     const pt = {
       pe:ph === 'idle' ? 'none' : 'auto', kanji:PAGE_KANJI[S.ptTo] || '',
@@ -589,7 +706,7 @@ class App extends React.Component {
       t, paper:PAPER, brush:BRUSH, pt, pg, shippo:SHIPPO, inkMode:S.theme === 'dark' ? 'mixDark' : 'mixLight', nav,
       userName, userInitial:(userName.charAt(0) || '?').toUpperCase(),
       themeChips:[['light', 'Washi'], ['dark', 'Nuit']].map(([v, l]) => ({ label:l, bg:S.theme === v ? t.invBg : 'transparent', fg:S.theme === v ? t.invFg : t.ink, go:() => this.setState({ theme:v }) })),
-      isHome:S.screen === 'home', isStock:S.screen === 'stock', isModels:S.screen === 'models', isModel:S.screen === 'model', isFeas:S.screen === 'feas', isCount:S.screen === 'count',
+      isHome:S.screen === 'home', isStock:S.screen === 'stock', isModels:S.screen === 'models', isModel:S.screen === 'model', isFeas:S.screen === 'feas', isCount:S.screen === 'count', isPlan:S.screen === 'plan',
       goHome:() => this.go('home'), goStock:() => this.go('stock', { stockFilter:'all' }), goStockOut:() => this.go('stock', { stockFilter:'out' }), goFeas:() => this.go('feas', { feasTab:'ok' }), goModels:() => this.go('models'),
       openBatch:() => { this.go('stock'); setTimeout(() => { const el = document.querySelector('[data-cmd]'); el && el.focus({ preventScroll:true }); }, 1400); },
       openNewModel:e => this.openNM(e), closeNewModel:() => this.closeNM(),
@@ -843,6 +960,55 @@ class App extends React.Component {
       V.toggleCodes = () => this.setState(s => ({ showCodes:!s.showCodes }));
       V.codesTrack = S.showCodes ? t.ink : t.line2; V.codesKnob = S.showCodes ? '15px' : '2px'; V.codesDisp = S.showCodes ? 'inline' : 'none';
     }
+    // plan de montage
+    if (V.isPlan) {
+      const r = S.recipes.find(x => x.id === S.planId), v = r && views.find(x => x.id === r.id);
+      if (!r) { setTimeout(() => this.setState({ screen:'models', planId:null }), 0); V.isPlan = false; }
+      else {
+        const plan = this.planData(r);
+        V.pl = { modelName:v.modelName, label:v.dithLabel, back:() => this.go('model', { modelId:r.modelId }), ready:!!plan };
+        if (plan) {
+          const px = plan.codes.map(code => info(code, r.pal)), counts = new Array(plan.codes.length).fill(0);
+          plan.cells.forEach(i => { if (i >= 0) counts[i]++; });
+          const total = counts.reduce((a, b) => a + b, 0), pw = Math.ceil(plan.w / PLATE), ph = Math.ceil(plan.h / PLATE);
+          const avail = Math.min(1160, (S.vw || window.innerWidth) - ((S.vw || window.innerWidth) <= 820 ? 32 : 330)) - PLAN_MARGIN;
+          const auto = Math.max(8, Math.min(28, Math.floor(avail / plan.w)));
+          const cell = S.planCell || auto, hi = S.planHi === undefined ? -1 : S.planHi;
+          const doneSet = new Set((S.planDone[r.id] || []).filter(code => plan.codes.includes(code)));
+          const placed = plan.codes.map(code => doneSet.has(code));
+          const opts = { cell, margin:PLAN_MARGIN, hi, placed, placedKey:[...doneSet].sort().join(','), hex:px.map(c => c.hex), ink:px.map(c => inkOn(c.hex)), sym:plan.codes.map((_, i) => symbolAt(i)),
+            bg:t.panelSolid, label:t.muted, plateLine:t.ink };
+          const setDone = (code, on) => this.setState(s => { const cur = new Set(s.planDone[r.id] || []); if (on) cur.add(code); else cur.delete(code); return { planDone:{ ...s.planDone, [r.id]:[...cur] } }; });
+          let legend = plan.codes.map((code, i) => ({ i, code, name:px[i].name, hex:px[i].hex, ink:opts.ink[i], sym:opts.sym[i], count:counts[i], countL:fmt(counts[i]),
+            on:hi === i, done:placed[i], dim:hi >= 0 && hi !== i && !placed[i], pick:() => this.setState(s => ({ planHi:s.planHi === i ? -1 : i })),
+            toggleDone:e => { e.stopPropagation(); setDone(code, !placed[i]); } }));
+          if (S.planSort === 'count') legend = legend.slice().sort((a, b) => b.count - a.count || natural(a.code, b.code));
+          // « Placée → suivante » : coche la couleur en cours puis passe à la prochaine non placée, dans l'ordre de la légende
+          const nextAfter = i => { const k = legend.findIndex(l => l.i === i); const rest = legend.slice(k + 1).concat(legend.slice(0, k)).find(l => !placed[l.i] && l.i !== i); return rest ? rest.i : -1; };
+          const doneColors = placed.filter(Boolean).length, doneBeads = counts.reduce((a, n, i) => a + (placed[i] ? n : 0), 0);
+          const hov = S.planHover;
+          const hovL = hov ? (hov.i >= 0 ? `${plan.codes[hov.i]} ${px[hov.i].name} · ${opts.sym[hov.i]}` : 'pas de perle') +
+            ` · colonne ${hov.x + 1}, rang ${hov.y + 1} · plaque ${plateRow(Math.floor(hov.y / PLATE))}${Math.floor(hov.x / PLATE) + 1} (case ${hov.x % PLATE + 1}, ${hov.y % PLATE + 1})` : 'Survole une perle pour voir sa couleur et sa position · clic sur une perle ou une couleur de la légende pour la choisir comme couleur en cours';
+          const subtitle = `${v.dithLabel} · ${plan.w} × ${plan.h} perles · ${pw * ph} plaque${pw * ph > 1 ? 's' : ''} (${pw} × ${ph}) · ${fmt(total)} perles · ${plan.codes.length} couleurs`;
+          Object.assign(V.pl, { plan, opts, legend, hovL, subtitle, cell, auto:!S.planCell,
+            setCell:e => this.setState({ planCell:+e.target.value }), autoCell:() => this.setState({ planCell:null }),
+            onHover:a => { const c0 = this.state.planHover; if (!a !== !c0 || (a && (a.x !== c0.x || a.y !== c0.y))) this.setState({ planHover:a }); }, onPick:i => this.setState(s => ({ planHi:s.planHi === i ? -1 : i })),
+            hasHi:hi >= 0, clearHi:() => this.setState({ planHi:-1 }), hiL:hi >= 0 ? `En cours : ${plan.codes[hi]} ${px[hi].name} · ${fmt(counts[hi])} perles` : '',
+            hiDone:hi >= 0 && placed[hi],
+            placeNext:() => { if (hi < 0) return; setDone(plan.codes[hi], true); this.setState({ planHi:nextAfter(hi) }); },
+            startNext:() => { const first = legend.find(l => !placed[l.i]); this.setState({ planHi:first ? first.i : -1 }); },
+            allDone:doneColors === plan.codes.length,
+            progL:`${doneColors} / ${plan.codes.length} couleurs placées · ${fmt(doneBeads)} / ${fmt(total)} perles`, progW:(total ? doneBeads / total * 100 : 0) + '%',
+            hasProgress:doneColors > 0, resetArm:!!S.planResetArm,
+            reset:() => { if (!S.planResetArm) { clearTimeout(this._prT); this.setState({ planResetArm:true }); this._prT = setTimeout(() => this.setState({ planResetArm:false }), 4000); return; }
+              clearTimeout(this._prT); this.setState(s => { const d = { ...s.planDone }; delete d[r.id]; return { planDone:d, planResetArm:false, planHi:-1 }; }); },
+            sortChips:this.chips([['code', 'Code'], ['count', 'Occurrences']], S.planSort || 'code', 'planSort', t),
+            totalL:`${fmt(total)} perles · ${plan.codes.length} couleurs`,
+            exportPng:() => exportPlan(plan, { ...opts, placed:[] }, legend, `${v.modelName}`) });
+          V.pl.opts.subtitle = subtitle;
+        }
+      }
+    }
     // sélection & liste de courses
     const selIds = Object.keys(S.sel).map(Number).filter(id => S.recipes.some(r => r.id === id));
     V.hasSel = selIds.length > 0 && V.isFeas; V.selN = selIds.length;
@@ -978,6 +1144,7 @@ function tpl(V) {
       ${V.isModel && tplModel(V, t, panel)}
       ${V.isFeas && tplFeas(V, t, panel, dot)}
       ${V.isCount && tplCount(V, t)}
+      ${V.isPlan && tplPlan(V, t, panel)}
     </div>
   </div>
 
@@ -1376,6 +1543,7 @@ function tplModel(V, t, panel) {
                   </div>
                   <div style="display:flex; justify-content:space-between; gap:6px; font-size:11px;">
                     <div onClick=${v.open} style="cursor:pointer; color:${t.ink};">Détail</div>
+                    <div onClick=${v.openPlan} style="cursor:pointer; color:${t.ink};">Plan</div>
                     <label style="position:relative; cursor:pointer; color:${t.muted};">Remplacer<input type="file" accept="image/png,image/*" onChange=${v.replace} style="position:absolute; inset:0; opacity:0; cursor:pointer; width:100%;" /></label>
                     <div onClick=${v.remove} style="cursor:pointer; color:${t.accent}; font-weight:${v.delW};">${v.delLabel}</div>
                   </div>
@@ -1467,6 +1635,72 @@ function genActions(c, t) {
       </div>
       ${c.hasSame && html`<div style="font-size:10.5px; color:${t.muted}; text-align:center;">${c.sameL}</div>`}
     </div>`;
+}
+
+function tplPlan(V, t, panel) {
+  const p = V.pl;
+  const pill = 'cursor:pointer; white-space:nowrap; padding:6px 12px; border-radius:999px; font-size:12px;';
+  return html`
+<div style="display:flex; flex-direction:column; gap:22px;">
+  <div onClick=${p.back} style="cursor:pointer; font-size:13px; color:${t.muted};">← Retour au modèle</div>
+  <div style="display:flex; justify-content:space-between; align-items:flex-end; gap:20px; flex-wrap:wrap;">
+    <div style="display:flex; flex-direction:column; gap:10px; min-width:0;">
+      <div style="${KICKER} color:${t.accent};">図面 · plan de montage</div>
+      <div class="tm-h1" style="${H1} font-size:64px; overflow-wrap:anywhere;">${p.modelName}</div>
+      <div style="font-size:13px; color:${t.muted};">${p.ready ? p.subtitle : p.label}</div>
+    </div>
+    ${p.ready && html`<div onClick=${p.exportPng} style="cursor:pointer; white-space:nowrap; padding:10px 18px; border-radius:999px; font-size:13px; font-weight:500; background:${t.invBg}; color:${t.invFg};">Exporter en PNG</div>`}
+  </div>
+  ${!p.ready && html`<div style="padding:60px 0; text-align:center; font-family:'Shippori Mincho',serif; font-size:20px; color:${t.muted};">Préparation du plan…</div>`}
+  ${p.ready && html`
+    <div style="${panel} padding:14px 16px; display:flex; flex-direction:column; gap:12px; min-width:0;">
+      <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap; font-size:12px;">
+        <label style="display:flex; align-items:center; gap:10px;">Zoom
+          <input type="range" min="6" max="40" value=${p.cell} onChange=${p.setCell} style="width:140px; accent-color:#B8322A;" />
+          <span style="font-family:'DM Mono',monospace;">${p.cell}px</span>
+        </label>
+        ${!p.auto && html`<div onClick=${p.autoCell} style="${pill} border:1px solid ${t.line2};">Ajuster à la largeur</div>`}
+        ${p.cell < 11 && html`<span style="color:${t.muted};">Zoome au-delà de 10 px pour voir les symboles.</span>`}
+      </div>
+      <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; font-size:12px; padding-top:10px; border-top:1px solid ${t.line};">
+        <div style="display:flex; flex-direction:column; gap:5px; min-width:220px; flex:1;">
+          <div style="font-family:'DM Mono',monospace; font-size:11.5px;">${p.progL}</div>
+          <div style="height:4px; background:${t.line}; border-radius:2px;"><div style="height:4px; width:${p.progW}; background:${t.ink}; border-radius:2px; transition:width .4s;"></div></div>
+        </div>
+        ${p.hasHi && html`<div onClick=${p.clearHi} title="Ne plus suivre de couleur" style="${pill} border:1px solid ${t.ink};">${p.hiL} ×</div>`}
+        ${p.hasHi && !p.hiDone && html`<div onClick=${p.placeNext} style="${pill} font-weight:500; background:${t.invBg}; color:${t.invFg};">✓ Placée → couleur suivante</div>`}
+        ${!p.hasHi && !p.allDone && html`<div onClick=${p.startNext} style="${pill} font-weight:500; background:${t.invBg}; color:${t.invFg};">${p.hasProgress ? 'Reprendre le montage' : 'Commencer le montage'}</div>`}
+        ${p.allDone && html`<span style="color:${t.accent}; font-weight:500;">Toutes les couleurs sont placées</span>`}
+        ${p.hasProgress && html`<div onClick=${p.reset} style="${pill} border:1px solid ${t.line2}; color:${p.resetArm ? t.accent : t.muted}; font-weight:${p.resetArm ? 600 : 400};">${p.resetArm ? 'Confirmer ?' : 'Réinitialiser'}</div>`}
+      </div>
+      <div style="overflow:auto; max-height:78vh; border-radius:2px;">
+        <${PlanCanvas} plan=${p.plan} opts=${p.opts} onHover=${p.onHover} onPick=${p.onPick} />
+      </div>
+      <div style="font-family:'DM Mono',monospace; font-size:11.5px; color:${t.muted}; min-height:16px;">${p.hovL}</div>
+    </div>
+    <div style="${panel} padding:18px 22px; display:flex; flex-direction:column; gap:12px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+        <div style="display:flex; flex-direction:column; gap:2px;">
+          <div style="font-family:'Shippori Mincho',serif; font-size:22px;">Légende</div>
+          <div style="font-size:12px; color:${t.muted};">${p.totalL}</div>
+        </div>
+        <div style="display:flex; gap:4px; align-items:center;">
+          <span style="font-size:12px; color:${t.muted}; margin-right:4px;">Trier par</span>
+          ${p.sortChips.map(c => html`<div key=${c.label} onClick=${c.go} style="${pill} background:${c.bg}; color:${c.fg};">${c.label}</div>`)}
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:2px 24px;">
+        ${p.legend.map(l => html`
+          <div key=${l.code} onClick=${l.pick} title="Choisir comme couleur en cours" style="cursor:pointer; display:grid; grid-template-columns:20px 26px 48px minmax(0,1fr) auto; gap:10px; align-items:center; padding:6px 8px; border-radius:4px; font-size:13px; background:${l.on ? t.chip : 'transparent'}; box-shadow:${l.on ? `0 0 0 1.5px ${t.ink}` : 'none'}; opacity:${l.dim ? .45 : 1};">
+            <div onClick=${l.toggleDone} title=${l.done ? 'Marquer comme non placée' : 'Marquer comme placée'} style="width:18px; height:18px; border:1.5px solid ${t.ink}; border-radius:3px; background:${l.done ? t.ink : 'transparent'}; color:${t.invFg}; display:flex; align-items:center; justify-content:center; font-size:12px;">${l.done ? '✓' : ''}</div>
+            <div style="width:26px; height:26px; border-radius:3px; background:${l.hex}; color:${l.ink}; box-shadow:0 0 0 1px ${t.edge}; display:flex; align-items:center; justify-content:center; font-family:'DM Mono',monospace; font-size:14px; font-weight:500;">${l.sym}</div>
+            <div style="font-family:'DM Mono',monospace; font-size:12px; font-weight:500;">${l.code}</div>
+            <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-decoration:${l.done ? 'line-through' : 'none'}; color:${l.done ? t.muted : t.ink};">${l.name}</div>
+            <div style="font-family:'DM Mono',monospace; font-size:12px;">${l.countL}</div>
+          </div>`)}
+      </div>
+    </div>`}
+</div>`;
 }
 
 function tplZoom(V, t) {
@@ -1652,6 +1886,7 @@ function tplDrawer(V, t, dot) {
       <div onClick=${dr.markDone} style="cursor:pointer; text-align:center; padding:12px; border-radius:999px; font-size:14px; font-weight:500; background:${t.invBg}; color:${t.invFg};">Marquer comme réalisée · déduire du stock</div>
       <div style="display:flex; gap:8px;">
         <div onClick=${dr.shopOne} style="flex:1; cursor:pointer; text-align:center; padding:10px; border-radius:999px; font-size:13px; border:1px solid ${t.ink};">Liste de courses</div>
+        <div onClick=${dr.openPlan} style="flex:1; cursor:pointer; text-align:center; padding:10px; border-radius:999px; font-size:13px; border:1px solid ${t.ink};">Voir le plan</div>
         <div onClick=${dr.goModel} style="flex:1; cursor:pointer; text-align:center; padding:10px; border-radius:999px; font-size:13px; border:1px solid ${t.line2};">Ouvrir le modèle</div>
       </div>
     </div>
